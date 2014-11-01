@@ -578,7 +578,7 @@ LitroSound.prototype = {
 		channel.dataUpdateFlag = true;
 		channel.resetEnvelope();
 		
-		
+		this.onNoteKeyEventFunc(ch, key);
 		// this.setFrequency(ch, freq);
 	},	
 	onNoteFromCode: function(ch, codenum, octave, refChannel)
@@ -1768,7 +1768,20 @@ AudioChannel.prototype = {
 		};
 		this.envelopes = {};
 		this.refreshEnvelopeParams(1);
+		this.finishEnvelope();
 		
+	},
+	
+	envelopeDistance: function(clockRate)
+	{
+		clockRate == null ? 1 : clockRate;
+		var env = this.envelopes;
+		return (env.attack + env.decay + env.length + env.release) * clockRate;
+	},
+	
+	finishEnvelope: function()
+	{
+		this.envelopeClock = this.envelopeDistance() + 1;
 	},
 	
 	tune: function(name, param)
