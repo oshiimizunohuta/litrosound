@@ -1668,6 +1668,7 @@ AudioChannel.tuneParamsProp = {
 	waveType:{id: 129, max: 15, min: 0},
 	volumeLevel:{id: 130, max: 15, min: 0},
 	attack:{id: 131, max: 64, min: 0},
+	// hold:{id: 132, max: 255, min: 0},
 	decay:{id: 132, max: 64, min: 0},
 	sustain:{id: 133, max: 15, min: 0},
 	length:{id: 134, max: 255, min: 0},
