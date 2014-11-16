@@ -20,7 +20,6 @@ var litroAudio = null;
 var VOLUME_TEST = 0.4;
 var litroSoundInstance = null;
 
-
 var DEFAULT_NOTE_LENGTH = 800; //ms
 var KEY_FREQUENCY = [
 	[32.703,34.648,36.708,38.891,41.203,43.654,46.249,48.999,51.913,55.000,58.270,61.735],
@@ -95,7 +94,7 @@ LitroSound.prototype = {
 		window.performance = window.performance == null ? window.Date : window.performance;
 		window.AudioContext = window.AudioContext || window.webkitAudioContext;
 		if(window.AudioContext == null){
-			console.log("this browser can't AudioContext!! ");
+			alert("this browser can't Litrosound!! ");
 			return;
 		}
 		// this.context = new AudioContext();
@@ -106,8 +105,7 @@ LitroSound.prototype = {
 		
 		this.audioChennelInit(channelNum);
 		
-		this.connectModules(PROCESS_BUFFER_SIZE);
-
+		// this.connectModules(PROCESS_BUFFER_SIZE);
 		// 出力開始
 		// src.noteOn(0);
 	},
@@ -190,6 +188,7 @@ LitroSound.prototype = {
 	{
 		var i, channel, scriptProcess, src, self = this, vol;
 		context = this.context;
+		
 		//ゲイン
 		if(this.gain != null){
 			vol = this.gain.gain.value;
@@ -198,7 +197,7 @@ LitroSound.prototype = {
 		this.gain = context.createGain();
 		this.gain.gain.value = vol == null ? this.masterVolume : vol;
 		this.gain.connect(context.destination);
-		
+
 		//プロセス
 		this.scriptProcess = null;
 		scriptProcess = context.createScriptProcessor(size, 0, 1);
@@ -208,11 +207,11 @@ LitroSound.prototype = {
 		scriptProcess.connect(this.gain);
 		this.scriptProcess = scriptProcess;
 
-		// this.source = this.context.createBufferSource();
-		// this.source.connect(scriptProcess);
-		// this.source.start(0);
-		// this.source.playbackRate = 8;
-		
+		this.source = this.context.createBufferSource();
+		// this.source.connect(this.scriptProcess);
+		this.source.start(0);
+		// this.source.playbackRate = 8;		
+						
 		//解析
 		this.analyser = null;
 		this.analyser = this.context.createAnalyser();
@@ -239,14 +238,20 @@ LitroSound.prototype = {
 	
 	connectOn: function()
 	{
-		this.connectOff();
+		// console.log('on');
+		// this.connectOff();
+		this.performanceValue = window.performance.now();
 		this.connectModules(PROCESS_BUFFER_SIZE);
-		// this.scriptProcess.connect(this.gain);
-		// this.scriptProcess.connect(this.analyser);
-		// this.gain.connect(this.context.destination);
+
+		return true;
 	},
 	connectOff: function()
 	{
+		// console.log('off');
+		if(this.source == null){
+			return;
+		}
+		this.source.stop(0);
 		this.scriptProcess.disconnect();
 		this.scriptProcess.onaudioprocess = null;
 		this.gain.disconnect();
@@ -267,7 +272,6 @@ LitroSound.prototype = {
 			, rate = this.refreshRate, rCrock = this.refreshClock
 			, d0 = new Float32Array(ev.outputBuffer.length)
 			;
-			// console.log(channels.length);
 		if(!this.checkPerformance(ev)){
 			this.clearBuffer(ev);
 			return;
@@ -275,8 +279,9 @@ LitroSound.prototype = {
 		data.set(d0);
 		for(i = 0; i < dlen; i++){
 			if(++rCrock >= rate){
-				for(ch = 0; ch < plen; ch++)
-				players[ch].player.playSound();
+				for(ch = 0; ch < plen; ch++){
+					players[ch].player.playSound();
+				}
 				for(ch = 0; ch < clen; ch++){
 					this.refreshWave(ch);
 				}
@@ -295,7 +300,7 @@ LitroSound.prototype = {
 	{
 		var pf = window.performance.now()
 			, self = this;
-		if(this.scriptProcess == null){return;}
+		if(this.scriptProcess == null){return false;}
 		if(pf - this.performanceValue > this.performanceCycle){
 			if(!this.processHeavyLoad){
 				console.log('process has become overloaded!!');
@@ -349,17 +354,25 @@ LitroSound.prototype = {
 		var clock = this.channel[ch].envelopeClock
 			, env = this.getEnvelopes(ch, refEnable)
 			;
-		clock -= env.attack;
-		if(clock < 0){return 'a';}
-	
-		clock -= env.decay;
-		if(clock < 0){return 'd';}
-	
-		clock -= env.length;
-		if(clock < 0){ return 's';}
+		if(env.attack > 0){
+			clock -= env.attack;
+			if(clock < 0){return 'a';}
+		}
 		
-		clock -= env.release;
-		if(clock < 0){ return 'r';}
+		if(env.decay > 0){
+			clock -= env.decay;
+			if(clock < 0){return 'd';}
+		}
+	
+		if(env.length > 0){
+			clock -= env.length;
+			if(clock < 0){ return 's';}
+		}
+		
+		if(env.release > 0){
+			clock -= env.release;
+			if(clock < 0){ return 'r';}
+		}
 		
 		return '';
 		// return phase(this.channel[ch]);
@@ -696,9 +709,10 @@ LitroSound.prototype = {
 			default: vol = 0; break;
 		}
 		
-		if(Number.isNaN(vol)){
-			console.log(this.getPhase(ch, true));
-		}
+		// if(Number.isNaN(vol)){
+		// if(vol == null){
+			// console.log(this.getPhase(ch, true));
+		// }
 		return vol;
 	},
 
@@ -712,7 +726,7 @@ var litroPlayerInstance = null;
  */
 function LitroPlayer(){return;};
 LitroPlayer.prototype = {
-	init: function(name)
+	init: function(name, litroSound)
 	{
 		// litroPlayerInstance = this;
 		
@@ -721,8 +735,8 @@ LitroPlayer.prototype = {
 		this.playPack.init(this);
 		this.noteSeekTime= 0; //note をセットする位置
 		this.playSoundFlag = false;
-		this.litroSound = litroSoundInstance;
-		this.litroSound.appendPlayer(name, this);
+		this.litroSound = litroSound != null ? litroSound : litroSoundInstance; //循環参照かもね？
+		this.litroSound.appendPlayer(name, this); //循環参照かも？
 		this.systemTime = 0;
 		this.VOLUME_INC = 0.1;
 		
@@ -771,7 +785,7 @@ LitroPlayer.prototype = {
 		this.COMMON_TUNE_CH = 0;
 		
 		this.clearEventsData();
-		
+
 		var i;
 		for(i = 0; i < AudioChannel.sortParam.length; i++){
 			this.eventsetKeyIndex[AudioChannel.sortParam[i]] = i;
@@ -1172,6 +1186,9 @@ LitroPlayer.prototype = {
 	
 	play: function()
 	{
+		if(this.litroSound.processHeavyLoad){
+			return false;
+		}
 		this.systemTime = performance.now();
 		this.playSoundFlag = true;
 		this.delayEventset = makeEventsetData();
@@ -1180,6 +1197,7 @@ LitroPlayer.prototype = {
 		}
 		litroSoundInstance.connectOff();
 		litroSoundInstance.connectOn();
+		return true;
 	},
 	
 	stop: function(toggle)
@@ -2080,7 +2098,6 @@ function pulseWave(channel, widthRate_l, widthRate_r)
 		, vol = litroSoundInstance.envelopedVolume(channel.id)
 		, data = channel.data, len = channel.waveLength, plen = channel.prevLength
 		;
-	
 	if(vol < 0){vol = 0;}
 	switchPos = ((len / (widthRate_l + widthRate_r)) * widthRate_l) | 0;
 	for(i = 0; i < len; i++){
@@ -2093,6 +2110,7 @@ function pulseWave(channel, widthRate_l, widthRate_r)
 	for(i; i < plen; i++){
 		data[i] = 0;
 	}
+
 }
 
 var start = function() {
