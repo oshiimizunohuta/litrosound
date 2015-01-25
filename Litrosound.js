@@ -47,6 +47,7 @@ function LitroSound() {
 
 var testval = 0;
 
+LitroSound.version = '0.07.08';
 LitroSound.prototype = {
 	init : function(channelNum) {
 		this.isFirefox = (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) ? true : false;
@@ -129,6 +130,7 @@ LitroSound.prototype = {
 	appendPlayer: function(name, player)
 	{
 		var primary = this.players.some(function(p, i){
+			//二重登録防止？
 			if(p.name == name){
 				primary = i;
 				return true;
@@ -137,7 +139,6 @@ LitroSound.prototype = {
 		}) ? primary : this.players.length
 			, append = {name: name, player: player, primary: primary};
 		this.players[primary] = append;
-		
 		return primary;
 	},
 	
@@ -696,7 +697,7 @@ LitroSound.prototype = {
 			default: vol = 0; break;
 		}
 		
-		if(Number.isNaN(vol)){
+		if(isNaN(vol)){
 			console.log(this.getPhase(ch, true));
 		}
 		return vol;
@@ -705,12 +706,59 @@ LitroSound.prototype = {
 	
 };
 
+/**
+ * デバッグ用
+ */
+function litroVersion()
+{
+	var str = ''
+		;
+		// ls.init(1);
+		// lp.init('v');
+
+	str = "LitroSound:" + LitroSound.version + "\n"
+	 + "LitroPlayer:" + LitroPlayer.version + "\n"
+	 + "LitroAudioParams:" + AudioChannel.paramsVersion;
+	console.log(str);
+}
+
+// function moveTuneID(from, to)
+// {
+	// var players = litroSoundInstance.players, p, res;
+	// for(i = 0; i < players.length; i++){
+		// p = players[i];
+		// if(p.name == 'edit'){
+			// res = p.player.moveTuneParamsID(from, to);
+		// }
+	// }
+	// return res;
+// }
+
+/**
+ *hold-id132, decay-id133, sustain-id134, length-id135, release-id136,
+ *  delay-id140, detune-id141, sweep-id150
+ * waveTypeHold-id181, waveTypeDecay-id182 
+ */
+// function migrationPlayData(vnum1, vnum2, vnum3)
+// {
+	// var tuneKeys = [];
+	// switch(vnum1){
+		// case '01': tuneKeys = ['hold', 'decay', 'sustain', 'length', ]
+	// }
+// }
+
+
 var TITLE_MAXLENGTH = 32;
 var litroPlayerInstance = null;
 /**
- * 再生
+ * データ管理オブジェクト
  */
 function LitroPlayer(){return;};
+LitroPlayer.version = '03.00';
+//v01.03.00:tuneParamsID変更(paramsVer.0.1.0)
+//v00.03.00:-値対応
+//v00.01.00:タグ付き
+
 LitroPlayer.prototype = {
 	init: function(name)
 	{
@@ -737,9 +785,8 @@ LitroPlayer.prototype = {
 		this.serverFileList = {};
 		
 		//parserParams
-		//v0.03:-値対応
-		//v0.01.00:タグ付き
-		this.fversion = '00.01.00';
+
+		this.fversion = AudioChannel.paramsVersion + '.' + LitroPlayer.version;
 		this.titleCodes = [];
 		this.titleMaxLength = TITLE_MAXLENGTH;
 		this.fileUserName = 'guest_user_';
@@ -969,6 +1016,7 @@ LitroPlayer.prototype = {
 			this.headerParams[key] = len < 0 ? '' : str.substr(start, len);
 		// console.log(start, len, this);
 		}
+		return this.headerParams;
 	},
 	
 	parseDataStr: function(data)
@@ -977,16 +1025,17 @@ LitroPlayer.prototype = {
 			, mode = this.CHARCODE_MODE
 			, datLen = this.DATA_LENGTH36
 			, rlen = 0, res = '', tvalLen = 0
-			, idKey = AudioChannel.tuneParamsIDKey()
+			, idKey
 			, minLen = datLen.ch + datLen.type + datLen.timeval
 			, delim = this.dataHeaderDelimiter, headerParams = {}
 			, eventsetData = makeEventsetData();
 		;
 		// data = data.substr(this.HEADER_LENGTH);
 		headerParams = this.parseHeaderStr(data.substr(0, data.lastIndexOf(delim)));
+		idKey = AudioChannel.tuneParamsIDKey(headerParams.fversion.split('.')[0]);
 		data = data.substr(data.lastIndexOf(delim) + delim.length);
 		dlen = data.length;
-		// console.log(data);
+
 		while(dlen > rlen + minLen){
 			ch = parseInt(data.substr(rlen, this.DATA_LENGTH36.ch), mode);
 			rlen += this.DATA_LENGTH36.ch;
@@ -1122,6 +1171,23 @@ LitroPlayer.prototype = {
 		this.sound_id = data.sound_id == null ? 0 : data.sound_id;
 		return true;
 	},
+	
+	moveTuneParamsID: function (from, to)
+	{
+		var i, len = this.eventsetData.length, events, tmp = null, removed;
+		for(i = 0; i < len; i++){
+			events = this.eventsetData[i];
+			if(events[from] != null){
+				tmp = events[from];
+			}
+			if(tmp != null && events[to] != null){
+				removed = events[to];
+				events[to] = tmp;
+			}
+		}
+		return tmp;
+	},
+	
 	
 	//パースしたデータが入る
 	insertPack: function(pack)
@@ -1653,6 +1719,15 @@ AudioChannel.sortParam = [
 
 //TODO エンベロープごとの波形タイプ
 //TODO サーバー保存時のマイナス処理
+
+/**
+ * 01:hold-id132, decay-id133, sustain-id134, length-id135, release-id136,
+ *  delay-id140, detune-id141, sweep-id150
+ * waveTypeHold-id181, waveTypeDecay-id182
+ * 00:初期
+ */
+AudioChannel.paramsVersion = "01";
+
 AudioChannel.tuneParamsProp = {
 	'void': {id: 0, max: 0, min: 0},
 	enable: {id: 1, max: 1, min: 0},
@@ -1668,20 +1743,43 @@ AudioChannel.tuneParamsProp = {
 	waveType:{id: 129, max: 15, min: 0},
 	volumeLevel:{id: 130, max: 15, min: 0},
 	attack:{id: 131, max: 64, min: 0},
-	// hold:{id: 132, max: 255, min: 0},
-	decay:{id: 132, max: 64, min: 0},
-	sustain:{id: 133, max: 15, min: 0},
-	length:{id: 134, max: 255, min: 0},
-	release:{id: 135, max: 255, min: 0},
-	delay:{id: 136, max: 255, min: 0},
-	detune:{id: 137, max: 127, min: -127},
-	sweep:{id: 138, max: 127, min: -127},
+	hold:{id: 132, max: 255, min: 0}, //v0.8
+	// decay:{id: 132, max: 64, min: 0},
+	// sustain:{id: 133, max: 15, min: 0},
+	// length:{id: 134, max: 255, min: 0},
+	// release:{id: 135, max: 255, min: 0},
+	// delay:{id: 136, max: 255, min: 0},
+	// detune:{id: 137, max: 127, min: -127},
+	// sweep:{id: 138, max: 127, min: -127},
+	decay:{id: 133, max: 64, min: 0},
+	sustain:{id: 134, max: 15, min: 0},
+	length:{id: 135, max: 255, min: 0},
+	release:{id: 136, max: 255, min: 0},
+	delay:{id: 140, max: 255, min: 0},
+	detune:{id: 141, max: 127, min: -127},
+	sweep:{id: 150, max: 127, min: -127},
+
 	vibratospeed:{id: 160, max: 255, min: 0},
 	vibratodepth:{id: 161, max: 255, min: 0},
 	vibratorise:{id: 162, max: 255, min: 0},
 	vibratophase:{id: 163, max: 255, min: 0},
 	waveTypeAttack:{id: 180, max: 15, min: -1},
-	waveTypeDecay:{id: 181, max: 15, min: -1},
+	waveTypeDecay:{id: 181, max: 15, min: -1}, //v0.8
+	// waveTypeHold:{id: 181, max: 15, min: -1}, //v0.8
+	// waveTypeDecay:{id: 182, max: 15, min: -1},
+};
+
+AudioChannel.diffListTuneParamsProp = {
+	"00":{
+		decay:{id: 132, max: 64, min: 0},
+		sustain:{id: 133, max: 15, min: 0},
+		length:{id: 134, max: 255, min: 0},
+		release:{id: 135, max: 255, min: 0},
+		delay:{id: 136, max: 255, min: 0},
+		detune:{id: 137, max: 127, min: -127},
+		sweep:{id: 138, max: 127, min: -127},
+		waveTypeDecay:{id: 181, max: 15, min: -1}, 
+	},
 };
 
 AudioChannel.commonTuneType = {
@@ -1689,17 +1787,34 @@ AudioChannel.commonTuneType = {
 	'return': '',
 };
 
-AudioChannel.tuneParamsIDKey = function()
+/**
+ * parseDataStr のときのみ呼ばれる
+ * @param {String} paramsVersion
+ */
+AudioChannel.tuneParamsIDKey = function(paramsVersion)
 {
-	var k, keys = {};
-	for(k in AudioChannel.tuneParamsProp){
-		keys[AudioChannel.tuneParamsProp[k].id] = k;
+	var k, keys = {}, props;
+	props = AudioChannel.tuneParamsProp;
+	for(k in props){
+		keys[props[k].id] = k;
 	}
-	// for(k in AudioChannel.tuneParamsID){
-		// keys[AudioChannel.tuneParamsID[k]] = k;
-	// }
+	
+	//ファイルバージョン差分対応
+	if(paramsVersion != null && !isNaN(parseInt(paramsVersion, 10))){
+		props = AudioChannel.diffListTuneParamsProp;
+		if(paramsVersion in props){
+			props = props[paramsVersion];
+			for(k in props){
+				keys[props[k].id] = k;
+			}
+		}
+		console.log("file version:" + paramsVersion + " -> " + AudioChannel.paramsVersion);
+	}
+
 	return keys;
 };
+
+
 AudioChannel.maxTune = function(name)
 {
 	return AudioChannel.tuneParamsProp[name].max;
