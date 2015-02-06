@@ -2,7 +2,7 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.07.08
+ * ver 0.08.01
  */
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -353,6 +353,9 @@ LitroSound.prototype = {
 		clock -= env.attack;
 		if(clock < 0){return 'a';}
 	
+		clock -= env.hold;
+		if(clock < 0){return 'h';}
+	
 		clock -= env.decay;
 		if(clock < 0){return 'd';}
 	
@@ -370,7 +373,7 @@ LitroSound.prototype = {
 	{
 		var clock = this.channel[ch].envelopeClock, env = this.getEnvelopes(ch, refEnable)
 		;
-		if(clock >= env.attack + env.decay + env.length + env.release){
+		if(clock >= env.attack + env.hold + env.decay + env.length + env.release){
 			return true;
 		}
 		return false;
@@ -551,6 +554,7 @@ LitroSound.prototype = {
 		;
 		switch(this.getPhase(ch, refEnable)){
 			case 'a': res = this.getChannel(ch, 'waveTypeAttack', refEnable); break;
+			case 'h': res = this.getChannel(ch, 'waveTypeHold', refEnable); break;
 			case 'd': res = this.getChannel(ch, 'waveTypeDecay', refEnable); break;
 			default: res = -1;
 		}
@@ -623,8 +627,7 @@ LitroSound.prototype = {
 		var channel = this.channel[channelNum]
 			, envelopes = channel.envelopes
 		;
-		// channel.envelopeClock = (envelopes.attack + envelopes.decay) | 0;
-		channel.envelopeClock = (envelopes.attack + envelopes.decay) | 0;
+		channel.envelopeClock = (envelopes.attack + envelopes.hold + envelopes.decay) | 0;
 		channel.envelopeClock += 0.1; //立ち上がり調整防止
 	},
 	
@@ -642,7 +645,6 @@ LitroSound.prototype = {
 	
 	skiptoReleaseClock: function(ch, refEnable)
 	{
-		// var clock = this.getChannel(ch, 'attack', refEnable) + this.getChannel(ch, 'decay', refEnable) + this.getChannel(ch, 'length', refEnable)
 		var env = this.getEnvelopes(ch, true)
 			, clock = env.decay + env.length
 			, channel = this.channel[ch]
@@ -680,17 +682,20 @@ LitroSound.prototype = {
 				d = vol / env.attack;
 				vol = clock * d;
 				break;
-			case 'd': 
+			case 'h': 
 				clock -= env.attack;
+				break;
+			case 'd': 
+				clock -= env.attack + env.hold;
 				d = (vol - svol) / env.decay;
 				vol -= clock * d;
 				break;
 			case 's': 
-				clock -= env.attack + env.decay;
+				clock -= env.attack + env.hold + env.decay;
 				vol = svol;
 				break;
 			case 'r': 
-				clock -= env.length + env.attack + env.decay;
+				clock -= env.length + env.attack + env.hold + env.decay;
 				d = (svol) / env.release;
 				vol = svol - (clock * d);
 				break;
@@ -1677,6 +1682,7 @@ AudioChannel.sortParam = [
 	'waveType',
 	'volumeLevel',
 	'attack',
+	'hold',
 	'decay',
 	'sustain',
 	'length',
@@ -1689,33 +1695,12 @@ AudioChannel.sortParam = [
 	'delay',
 	'detune',
 	'waveTypeAttack',
+	'waveTypeHold',
 	'waveTypeDecay',
 	'event',
 	'enable',
 	'note'
 ];
-// 
-// AudioChannel.sortParam = [
-	// 'waveType',
-	// 'volumeLevel',
-	// 'attack',
-	// 'decay',
-	// 'sustain',
-	// 'length',
-	// 'release',
-	// 'delay',
-	// 'detune',
-	// 'sweep',
-	// 'vibratospeed',
-	// 'vibratodepth',
-	// 'vibratorise',
-	// 'vibratophase',
-	// 'waveTypeAttack',
-	// 'waveTypeDecay',
-	// 'event',
-	// 'enable',
-	// 'note'
-// ];
 
 //TODO エンベロープごとの波形タイプ
 //TODO サーバー保存時のマイナス処理
@@ -1744,13 +1729,6 @@ AudioChannel.tuneParamsProp = {
 	volumeLevel:{id: 130, max: 15, min: 0},
 	attack:{id: 131, max: 64, min: 0},
 	hold:{id: 132, max: 255, min: 0}, //v0.8
-	// decay:{id: 132, max: 64, min: 0},
-	// sustain:{id: 133, max: 15, min: 0},
-	// length:{id: 134, max: 255, min: 0},
-	// release:{id: 135, max: 255, min: 0},
-	// delay:{id: 136, max: 255, min: 0},
-	// detune:{id: 137, max: 127, min: -127},
-	// sweep:{id: 138, max: 127, min: -127},
 	decay:{id: 133, max: 64, min: 0},
 	sustain:{id: 134, max: 15, min: 0},
 	length:{id: 135, max: 255, min: 0},
@@ -1764,9 +1742,8 @@ AudioChannel.tuneParamsProp = {
 	vibratorise:{id: 162, max: 255, min: 0},
 	vibratophase:{id: 163, max: 255, min: 0},
 	waveTypeAttack:{id: 180, max: 15, min: -1},
-	waveTypeDecay:{id: 181, max: 15, min: -1}, //v0.8
-	// waveTypeHold:{id: 181, max: 15, min: -1}, //v0.8
-	// waveTypeDecay:{id: 182, max: 15, min: -1},
+	waveTypeHold:{id: 181, max: 15, min: -1}, //v0.8
+	waveTypeDecay:{id: 182, max: 15, min: -1}, //v0.8
 };
 
 AudioChannel.diffListTuneParamsProp = {
@@ -1869,6 +1846,7 @@ AudioChannel.prototype = {
 			detune:0,
 			sweep:0,
 			attack:0,
+			hold:0,
 			decay:0,
 			sustain:10,
 			release:0,
@@ -1877,6 +1855,7 @@ AudioChannel.prototype = {
 			vibratorise:0,
 			vibratophase:0,
 			waveTypeAttack:-1,
+			waveTypeHold:-1,
 			waveTypeDecay:-1,
 			'event': 0,
 			enable:1,
@@ -1892,7 +1871,7 @@ AudioChannel.prototype = {
 	{
 		clockRate == null ? 1 : clockRate;
 		var env = this.envelopes;
-		return (env.attack + env.decay + env.length + env.release) * clockRate;
+		return (env.attack + env.hold + env.decay + env.length + env.release) * clockRate;
 	},
 	
 	finishEnvelope: function()
@@ -1909,7 +1888,7 @@ AudioChannel.prototype = {
 	refreshEnvelopeParams: function(clockRate)
 	{
 		var p = this.tuneParams;
-		this.envelopes = {attack: p.attack * clockRate, decay: p.decay * clockRate, length: p. length * clockRate, release: p.release * clockRate, sustain: p.sustain, volumeLevel: p.volumeLevel};
+		this.envelopes = {attack: p.attack * clockRate, hold: p.hold * clockRate, decay: p.decay * clockRate, length: p. length * clockRate, release: p.release * clockRate, sustain: p.sustain, volumeLevel: p.volumeLevel};
 	},
 	
 	// envelopes: function(clockRate)
@@ -1999,7 +1978,7 @@ AudioChannel.prototype = {
 		clockRate == null ? 1 : clockRate;
 		var clock = this.envelopeClock, env = this.envelopes
 		;
-		if(clock >= env.attack + env.decay + env.length + env.release){
+		if(clock >= env.attack + env.hold + env.decay + env.length + env.release){
 			return true;
 		}
 		return false;
