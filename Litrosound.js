@@ -2,7 +2,7 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.08.01
+ * ver 0.08.02
  */
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -88,6 +88,7 @@ LitroSound.prototype = {
 		this.source = null; //重要バッファ
 		this.setChannelEventFunc = function(){return;};
 		this.onNoteKeyEventFunc = function(){return;};
+		this.offNoteKeyEventFunc = function(){return;};
 		this.fadeoutEventFunc = function(){return;};
 		
 		TOP_FREQ_LENGTH = 0; //init
@@ -563,6 +564,10 @@ LitroSound.prototype = {
 	
 	setOnNoteKeyEvent: function(func){
 		this.onNoteKeyEventFunc = func;
+	},
+	
+	setOffNoteKeyEvent: function(func){
+		this.offNoteKeyEventFunc = func;
 	},
 	
 	getNoteKey: function(ch)
@@ -1815,6 +1820,7 @@ AudioChannel.prototype = {
 		this.waveLength = 0;
 		this.refreshClock = 0;
 		this.waveClockPosition = 0;
+		this.preWaveClockPosition = 0;
 		this.detuneClock = 0;
 		this.envelopeClock = 0;
 		this.envelopeEnd = true;//初期大音量防止
@@ -1877,6 +1883,7 @@ AudioChannel.prototype = {
 	finishEnvelope: function()
 	{
 		this.envelopeClock = this.envelopeDistance() + 1;
+		litroSoundInstance.offNoteKeyEventFunc(this.id, this.noteKey);
 	},
 	
 	tune: function(name, param)
@@ -1955,23 +1962,24 @@ AudioChannel.prototype = {
 	},
 	
 	trigRize: function(){
-		//立ち上がり
+		//note立ち上がり
 			this.setFreqency(freqByKey(this.noteKey));
 			this.clearWave(this.waveLength, this.prevLength);
-			this.waveClockPosition = Math.round(this.waveClockPosition * (this.waveLength / this.prevLength));
-			this.absorbPosition = Math.round(this.absorbPosition * (this.waveLength / this.prevLength));
+			this.waveClockPosition = Math.round(this.preWaveClockPosition * (this.waveLength / this.prevLength));
+			// this.absorbPosition = Math.round(this.absorbPosition * (this.waveLength / this.prevLength));
 			this.absorbNegCount = 0;
 	},
 	
 	trigFall: function(){
-		//立ち下がり
+		//note立ち下がり
 		// if(this.isFinishEnvelope(channelNum, true) && !channel.envelopeEnd){
-			this.absorbVolume = this.data[this.waveClockPosition];
-			this.absorbPosition = this.waveClockPosition;
+			this.absorbVolume = this.data[this.preWaveClockPosition];
+			// this.absorbPosition = this.waveClockPosition;
 			this.absorbCount = 0;
 			this.envelopeEnd = true;
 			this.dataUpdateFlag = false;
 			this.envelopeStart = false;
+			this.finishEnvelope();
 	},
 	
 	isFinishEnvelope: function(clockRate){
@@ -1989,6 +1997,7 @@ AudioChannel.prototype = {
 		var vol, avol
 		, wpos = this.waveClockPosition, wlen = this.waveLength
 		, detune = this.getDetunePosition()
+		, absCoe = 0.001;
 		;
 
 		// if(wpos == 0 && this.isNoiseType()){
@@ -2003,14 +2012,16 @@ AudioChannel.prototype = {
 		vol = this.data[(wlen + wpos + detune) % wlen];
 		if(this.envelopeEnd == true){
 			//クリック音防止余韻
-			avol = this.absorbVolume * Math.exp(-0.001 * this.absorbCount++);
+			avol = this.absorbVolume * Math.exp(-absCoe * this.absorbCount++);
+			// if(avol > 0.01){console.log(absCoe);}
 			return vol + avol;
 		}else if(this.envelopeStart == true){
-			avol = -this.absorbVolume * Math.exp(-0.001 * this.absorbNegCount++);
+			avol = -this.absorbVolume * Math.exp(-absCoe * this.absorbNegCount++);
 		}else{
 			avol = 0;
 			return avol;
 		}
+		this.preWaveClockPosition = wpos;
 		this.waveClockPosition = wpos + 1 < wlen ? wpos + 1 : 0;
 		return vol + avol;
 	},
