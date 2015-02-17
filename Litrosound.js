@@ -210,9 +210,10 @@ LitroSound.prototype = {
 		scriptProcess.connect(this.gain);
 		this.scriptProcess = scriptProcess;
 
-		// this.source = this.context.createBufferSource();
-		// this.source.connect(scriptProcess);
-		// this.source.start(0);
+		//iOSで必須！！
+		this.source = this.context.createBufferSource();
+		this.source.connect(scriptProcess);
+		this.source.start(0);
 		// this.source.playbackRate = 8;
 		
 		//解析
