@@ -435,7 +435,7 @@ LitroSound.prototype = {
 		return this.channel[ch].envelopes;
 		// return this.channel[ch].envelopes(this.minClock);
 	},
-	
+	//TODO player に任せる
 	setSetChannelEvent: function(func){
 		this.setChannelEventFunc = func;
 	},
@@ -785,6 +785,8 @@ LitroPlayer.prototype = {
 		this.systemTime = 0;
 		this.VOLUME_INC = 0.1;
 		
+		this.setChannelEventFunc = function(){return;};
+		
 		this.eventsetData = []; //ControllChangeともいう
 		this.delayEventset = [];
 		this.fileUserName = 'guest_user_';
@@ -794,25 +796,6 @@ LitroPlayer.prototype = {
 		this.title = '';
 		
 		this.serverFileList = {};
-		
-		//parserParams
-
-		this.fversion = AudioChannel.paramsVersion + '.' + LitroPlayer.version;
-		this.titleCodes = [];
-		this.titleMaxLength = TITLE_MAXLENGTH;
-		this.fileUserName = 'guest_user_';
-		this.playerAccount = 'guest_user_';
-		this.FORMAT_LAVEL = 'litrosoundformat';
-		this.fileOtherInfo = 'xxxxxxxxxxxxxxxx';
-		this.dataHeaderDelimiter = '[datachunk]';
-		this.headerParamDelimiters = {title: '[title]', playerAccount: '[auth]', fversion: '[version]'};
-		this.HEADER_TITLELENGTH = this.titleMaxLength;
-		this.DATA_LENGTH16 = {ch:2, type:2, timeval:4, time:6, value:2};
-		this.DATA_LENGTH36 = {ch:1, type:2, timeval:3, time:4, value:2};
-		this.CHARCODE_LENGTH16 = 8;//4byte
-		this.CHARCODE_LENGTH36 = 6;//3byte
-		this.CHARCODE_MODE = 36;		
-		this.headerParams = {};
 		
 		// this.timeOutEvent = {};
 		this.timeOutCC = [];
@@ -835,238 +818,12 @@ LitroPlayer.prototype = {
 			this.eventsetKeyIndex[AudioChannel.sortParam[i]] = i;
 		}
 	},
-	
-		
-	pad0: function(str, num)
-	{
-		while(num - str.length > 0){
-			str = '0' + str;
-		}
-		return str;
-	},
-	
-	/**
-	 * cookie
-	 * [header: 64]
-	 * litrosoundformat
-	 * version-xx.xx.xx
-	 * auth_xxxxxxxxxxx
-	 * [title: 16](xxxxxxxxxxxxxxxx)
-	 * [datachunk: 4096 - 64]
-	 * <CH><TYPEID><LENGTH><DATA>
-	 * <CH><TYPEID><LENGTH><DATA>
-	 * <255><COMMONTYPEID><LENGTH><DATA>
-	 * DATA:<time><value>
-	 * 4.6h
-	 */
-	/**
-	 * litrosoundformat
-	 * [version]xx.xx.xx
-	 * [auth]xxxxxxxxxxx
-	 * [title](xxxxxxxxxxxxxxxx)32
-	 * [datachunk]4096 - 64
-	 * <CH><TYPEID><LENGTH><DATA>
-	 * <CH><TYPEID><LENGTH><DATA>
-	 * <255><COMMONTYPEID><LENGTH><DATA>
-	 * DATA:<time><value>
-	 * 4.6h
-	 */	
 	 
-// 	 TODO headerObjectをつくる
-	headerInfo: function()
+	setSetChannelEvent:function()
 	{
-		// this.fileUserName = this.fileUserName.substr(0, 11);
-		var title = this.str5bit(this.titleCodes.length > 0 ? this.titleCodes : this.title);
-		// if(info.length < this.HEADER_TITLELENGTH){
-			// info = 'xxxxxxxxxxxxxxxx'.substr(0, this.HEADER_TITLELENGTH - info.length) + info;
-		// }
-		// this.fileOtherInfo = info.substr(0, this.HEADER_TITLELENGTH);
-		// return this.FORMAT_LAVEL + 'version-' + this.fversion + 'auth_' + this.fileUserName + this.fileOtherInfo;
-		return this.FORMAT_LAVEL + '[version]' + this.fversion + '[auth]' + this.playerAccount + '[title]' + title + this.dataHeaderDelimiter;
+		this.setChannelEventFunc = func;
 	},
 	
-	//byteArray or String
-	str5bit: function(source)
-	{
-		var i = 0, bstr = "", str = '', len = source.length, c
-			, mode = this.CHARCODE_MODE, strbits = 16, codebits = 5
-		;
-		while(len > i){
-			if(typeof source == 'string'){
-				c = source.charCodeAt(i).toString(2);
-			}else{
-				c = source[i].toString(2);
-			}
-			if(c.length % strbits > 0){
-				c = ('00000000'.substr(0, strbits - (c.length % strbits))) + c;
-			}
-			bstr += c;
-			i++;
-		}
-		len = bstr.length;
-		if(len % codebits > 0){
-			bstr += '00000'.substr(0, codebits - (len % codebits));
-			len = bstr.length;
-		}
-		i = 0;
-		while(len > i){
-			str += parseInt((bstr.substr(i, codebits)), 2).toString(mode);
-			i += codebits;
-		}
-		return str;
-		// return encodeURIComponent(this.title).substr(0, 16);
-	},
-	
-	dataToString: function(edat)
-	{
-		// AudioChannel.tuneParamsID
-		var str = ''
-			, ch, time, type, chstr, timeDats, typeDatsNum
-			, typestr
-			, prop = AudioChannel.tuneParamsProp
-			, mode = this.CHARCODE_MODE
-			, datLen = this.DATA_LENGTH36
-		;
-		// console.log(keyId);
-		for(ch in edat){
-			chstr = this.pad0((ch | 0).toString(mode), datLen.ch); //+2
-			// console.log('ch', chstr);
-
-			for(type in edat[ch]){
-				timeDatsNum = 0;
-				for(time in edat[ch][type]){
-					timeDatsNum++;
-				}
-				
-				typestr = this.pad0((prop[type].id | 0).toString(mode), datLen.type);//+2
-				typestr += this.pad0((timeDatsNum | 0).toString(mode), datLen.timeval);//+4
-			// console.log('length', this.pad0((timeDatsNum | 0).toString(mode), 4));
-			// console.log('type', this.pad0((type | 0).toString(mode), 2));
-				for(time in edat[ch][type]){
-					typestr += this.pad0((time | 0).toString(mode), datLen.time);//+6
-					typestr += this.pad0(((edat[ch][type][time].value | 0) - prop[type].min).toString(mode), datLen.value);//+2
-			// console.log('time', this.pad0((time | 0).toString(mode), 6));
-			// console.log('value', edat[ch][type][time], this.pad0((edat[ch][type][time].value | 0).toString(mode), 2));
-				}
-				if(timeDatsNum == 0){continue;}
-				str += chstr + typestr;
-			// console.log(chstr + typestr);
-			}
-		}
-		
-//		str = JSON.stringify(this.eventsetData);
-		// console.log(str, str.length);
-		return str;
-	},
-	
-	dataStrToCharCode: function(str)
-	{
-		var i, len, clen = 0, sepLen = this.CHARCODE_LENGTH36
-			, charCode = ''
-		;
-		len = str.length;
-		if(len % sepLen > 0){
-			str += '00000000'.substr(0, sepLen - (len % sepLen));
-			len += len % sepLen;
-		}
-		
-		while(len > clen){
-			charCode += String.fromCharCode(parseInt(str.substr(clen, sepLen), 16));
-			// console.log(str.substr(clen, sepLen), String.fromCharCode(parseInt(str.substr(clen, sepLen), 16)));
-			clen += sepLen;
-		}
-		// console.log(charCode, charCode.length);
-		return charCode;
-	},
-	//%04%E6%90%80%E2%B0%80%EF%90%80%EB%B0%80
-	
-	charCodeToDataStr: function(code)
-	{
-		var sepLen = this.CHARCODE_LENGTH36, clen = code.length
-			, rlen = 0, str = '', sepStr
-		, mode = this.CHARCODE_MODE
-		;
-		// console.log(code);
-		while(clen > rlen){
-			sepStr = code.substr(rlen, 1).charCodeAt(0).toString(mode);
-			// console.log(sepStr);
-			str += '00000000'.substr(0, sepLen - sepStr.length) + sepStr;
-			// console.log(sepStr, '00000000'.substr(0, sepLen - sepStr.length) + sepStr);
-			rlen += 1;
-		}
-		return str;
-	},
-	//datastr parse のみ有効
-	timevalData: function(type, timeval)
-	{
-		var i, res = {}, datLen = this.DATA_LENGTH36
-		, mode = this.CHARCODE_MODE
-		, chunkLen = datLen.time + datLen.value
-		, length = (timeval.length / chunkLen) | 0
-		, time, value
-		, prop = AudioChannel.tuneParamsProp
-		;
-		// console.log(timeval, length);
-		for(i = 0; i < length; i++){
-			time = parseInt(timeval.substr(chunkLen * i, datLen.time), mode);
-			value = parseInt(timeval.substr((chunkLen * i) + datLen.time, datLen.value), mode) + prop[type].min;
-			res[time] = {type: type, time: time, value: value};
-		}
-		// console.log(type, res);
-		return res;
-	},
-	
-	parseHeaderStr: function(str)
-	{
-		// '[version]' '[auth]' '[title]' 
-		var start, len, deli;
-		for(key in this.headerParamDelimiters){
-			deli = this.headerParamDelimiters[key];
-			start = str.lastIndexOf(deli) + deli.length;
-			len = str.indexOf('[', start) - start;
-			this.headerParams[key] = len < 0 ? '' : str.substr(start, len);
-		// console.log(start, len, this);
-		}
-		return this.headerParams;
-	},
-	
-	parseDataStr: function(data)
-	{
-		var dlen
-			, mode = this.CHARCODE_MODE
-			, datLen = this.DATA_LENGTH36
-			, rlen = 0, res = '', tvalLen = 0
-			, idKey
-			, minLen = datLen.ch + datLen.type + datLen.timeval
-			, delim = this.dataHeaderDelimiter, headerParams = {}
-			, eventsetData = makeEventsetData();
-		;
-		// data = data.substr(this.HEADER_LENGTH);
-		headerParams = this.parseHeaderStr(data.substr(0, data.lastIndexOf(delim)));
-		idKey = AudioChannel.tuneParamsIDKey(headerParams.fversion.split('.')[0]);
-		data = data.substr(data.lastIndexOf(delim) + delim.length);
-		dlen = data.length;
-
-		while(dlen > rlen + minLen){
-			ch = parseInt(data.substr(rlen, this.DATA_LENGTH36.ch), mode);
-			rlen += this.DATA_LENGTH36.ch;
-			type = idKey[parseInt(data.substr(rlen, this.DATA_LENGTH36.type), mode) | 0];
-			rlen += this.DATA_LENGTH36.type;
-			tvalLen = parseInt(data.substr(rlen, this.DATA_LENGTH36.timeval), mode);
-			rlen += this.DATA_LENGTH36.timeval;
-			tval = this.timevalData(type, data.substr(rlen, (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen));
-			rlen += (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen;
-			// console.log('ch: ' + ch, 'type: ' + type, 'tvalLen: ' + tvalLen, 'tval: ' + tval);
-			if(eventsetData[ch] == null){
-				eventsetData[ch] = {};
-			}
-			eventsetData[ch][type] = tval;
-			// this.eventsetData[ch][type] = tval;
-			// console.log(this.eventsetData[ch]);
-		}
-		
-		return eventsetData;
-	},
 	clearEventsData: function()
 	{
 		this.eventsetData = makeEventsetData();
@@ -1083,9 +840,12 @@ LitroPlayer.prototype = {
 	// saveToServer: function(params, func, errorFunc)
 	saveToServer: function(user_id, sound_id, dataObj, func, errorFunc)
 	{
-		var data = encodeURIComponent(this.headerInfo() + this.dataToString(dataObj))
-			, params = {user_id: user_id, sound_id: sound_id, data: data, title: this.title};
-		
+			var parser = new LitroSoundParser()
+			, currentFile = {title: this.title, playerAccount: this.playerAccount, eventsetData: this.eventsetData}
+			, data = parser.dataComponent(currentFile)
+			, params = {user_id: user_id, sound_id: sound_id, data: data, title: this.title}
+			;
+			
 		func = func == null ? function(){return;} : func;
 		errorFunc = errorFunc == null ? function(){return;} : errorFunc;
 		if(params.sound_id == 0){
@@ -1138,6 +898,7 @@ LitroPlayer.prototype = {
 			sound.user_name = data.user_name == null ? '' : data.user_name;
 			sound.user_id = data.user_id == null ? 0 : data.user_id;
 			sound.sound_id = data.sound_id == null ? 0 : data.sound_id;
+			self.setPlayData(sound);
 			
 			// self.dataPacks[self.NONPACK_NAME] = {};
 			// self.dataPacks[self.NONPACK_NAME][sound.title] = sound;
@@ -1167,6 +928,50 @@ LitroPlayer.prototype = {
 		}, errorFunc);
 	},
 	
+	/*
+	* Load system sounds
+	* name: litrokeyboard
+	*/
+	loadSystemSound: function(sename, func, errorFunc)
+	{
+	var self = this
+		, params = {}
+		;
+		func = func == null ? function(){return;} : func;
+		errorFunc = errorFunc == null ? function(){return;} : errorFunc;
+		if(sename == null){
+			return;
+		}
+		
+		params.sename = sename;
+		
+		sendToAPIServer('GET', 'systemse', params, function(data){
+			var i
+			, packFiles = self.playPack.packFiles
+			, packTitles = self.playPack.packTitles
+			, packIDs = self.playPack.packIDs
+				, lp = new LitroSoundParser();
+			if(data == null || data == false){
+				errorFunc(data);
+			}
+			// console.log(data, lp.parseDataStr(data));
+			packFiles[sename] = [];
+			packTitles[sename] = [];
+			packIDs[sename] = [];
+			for(i = 0; i < data.length; i++){
+				data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
+				packFiles[sename][i] = data[i];
+				packTitles[sename][i] = data[i].title;
+				packIDs[sename][i] = data[i].sound_id;
+			}
+			// console.log(self.playPack);
+			
+			self.setPlayDataFromPackIndex(sename, 0);
+			
+			func(packFiles);
+			}, errorFunc);
+	},
+	
 	packListFromServer: function(user_id, page, limit, func, errorFunc)
 	{
 		this.playPack.listFromServer(user_id, page, limit, func, errorFunc);
@@ -1174,8 +979,11 @@ LitroPlayer.prototype = {
 	
 	setPlayData: function(data)
 	{
+		var lp = new LitroSoundParser();
 		this.clearEventsData();
-		this.eventsetData = this.parseDataStr(decodeURIComponent(data.data));
+		// this.eventsetData = this.parseDataStr(decodeURIComponent(data.data));
+		
+		this.eventsetData = data.parseData != null ? data.parseData : lp.parseDataStr(decodeURIComponent(data.data));
 		this.title = data.title == null ? '' : data.title;
 		this.fileUserName = data.user_name == null ? '' : data.user_name;
 		this.user_id = data.user_id == null ? 0 : data.user_id;
@@ -1209,6 +1017,16 @@ LitroPlayer.prototype = {
 			// playdata = 
 		}
 		this.playPack = pack;
+	},
+	
+	setPlayDataFromPackIndex: function(packName, index)
+	{
+		var files = this.playPack.packFiles;
+		console.log(files);
+		if(files[packName] == null || files[packName][index] == null){
+			return false;
+		}
+		return this.setPlayData(files[packName][index]);
 	},
 	
 	setPlayDataFromPackForKey: function(packName, indexKey)
@@ -1562,7 +1380,10 @@ LitroPlayPack.prototype = {
 	init: function()
 	{
 		this.packList = [];
-		this.parseFiles = {};
+		this.packFiles = [];
+		this.packTitles = [];
+		this.packIDs = [];
+		
 		// this.litroSound = litroSoundInstance;
 		
 		this.NONPACK_NAME = ' NO-PACK ';
@@ -1589,15 +1410,15 @@ LitroPlayPack.prototype = {
 		}, errorFunc);
 	},
 	
-	loadSoundPackage: function(user_id, pack_id, func, errorFunc)
+	loadPack: function(pack_query, func, errorFunc)
 	{
 		var self = this
-			, params = {user_id: user_id, pack_id: pack_id}
+			, params = {pack_query: pack_query}
 		;
-		if(user_id == 0){
-			errorFunc({error_code: 0, message: 'no user_id'});
-			return;
-		}
+		// if(user_id == 0){
+			// errorFunc({error_code: 0, message: 'no user_id'});
+			// return;
+		// }
 		if(packName == null){
 			errorFunc({error_code: 0, message: 'no Package Name'});
 			return;
@@ -1624,7 +1445,238 @@ LitroPlayPack.prototype = {
 };
 
 //TODO parserを作る？
-function litroSoundParser(){return;};
+var LitroSoundParser = function(){
+	this.fversion = AudioChannel.paramsVersion + '.' + LitroPlayer.version;
+	this.titleCodes = [];
+	this.titleMaxLength = TITLE_MAXLENGTH;
+	this.fileUserName = 'guest_user_';
+	this.playerAccount = 'guest_user_';
+	this.FORMAT_LAVEL = 'litrosoundformat';
+	this.fileOtherInfo = 'xxxxxxxxxxxxxxxx';
+	this.dataHeaderDelimiter = '[datachunk]';
+	this.headerParamDelimiters = {title: '[title]', playerAccount: '[auth]', fversion: '[version]'};
+	this.HEADER_TITLELENGTH = this.titleMaxLength;
+	this.DATA_LENGTH16 = {ch:2, type:2, timeval:4, time:6, value:2};
+	this.DATA_LENGTH36 = {ch:1, type:2, timeval:3, time:4, value:2};
+	this.CHARCODE_LENGTH16 = 8;//4byte
+	this.CHARCODE_LENGTH36 = 6;//3byte
+	this.CHARCODE_MODE = 36;		
+	this.headerParams = {};
+};
+
+LitroSoundParser.prototype = {
+	/**
+	 * cookie
+	 * [header: 64]
+	 * litrosoundformat
+	 * version-xx.xx.xx
+	 * auth_xxxxxxxxxxx
+	 * [title: 16](xxxxxxxxxxxxxxxx)
+	 * [datachunk: 4096 - 64]
+	 * <CH><TYPEID><LENGTH><DATA>
+	 * <CH><TYPEID><LENGTH><DATA>
+	 * <255><COMMONTYPEID><LENGTH><DATA>
+	 * DATA:<time><value>
+	 * 4.6h
+	 */
+	/**
+	 * litrosoundformat
+	 * [version]xx.xx.xx
+	 * [auth]xxxxxxxxxxx
+	 * [title](xxxxxxxxxxxxxxxx)32
+	 * [datachunk]4096 - 64
+	 * <CH><TYPEID><LENGTH><DATA>
+	 * <CH><TYPEID><LENGTH><DATA>
+	 * <255><COMMONTYPEID><LENGTH><DATA>
+	 * DATA:<time><value>
+	 * 4.6h
+	 */	
+	pad0: function(str, num)
+	{
+		while(num - str.length > 0){
+			str = '0' + str;
+		}
+		return str;
+	},
+	
+	 
+// 	 TODO headerObjectをつくる
+	headerInfo: function(currentFile)
+	{
+		var title = this.str5bit(this.titleCodes.length > 0 ? this.titleCodes : currentFile.title);
+		return this.FORMAT_LAVEL + '[version]' + this.fversion + '[auth]' + currentFile.playerAccount + '[title]' + title + this.dataHeaderDelimiter;
+	},
+	
+	//byteArray or String
+	str5bit: function(source)
+	{
+		var i = 0, bstr = "", str = '', len = source.length, c
+			, mode = this.CHARCODE_MODE, strbits = 16, codebits = 5
+		;
+		while(len > i){
+			if(typeof source == 'string'){
+				c = source.charCodeAt(i).toString(2);
+			}else{
+				c = source[i].toString(2);
+			}
+			if(c.length % strbits > 0){
+				c = ('00000000'.substr(0, strbits - (c.length % strbits))) + c;
+			}
+			bstr += c;
+			i++;
+		}
+		len = bstr.length;
+		if(len % codebits > 0){
+			bstr += '00000'.substr(0, codebits - (len % codebits));
+			len = bstr.length;
+		}
+		i = 0;
+		while(len > i){
+			str += parseInt((bstr.substr(i, codebits)), 2).toString(mode);
+			i += codebits;
+		}
+		return str;
+	},
+	
+	dataToString: function(edat)
+	{
+		// AudioChannel.tuneParamsID
+		var str = ''
+			, ch, time, type, chstr, timeDats, typeDatsNum
+			, typestr
+			, prop = AudioChannel.tuneParamsProp
+			, mode = this.CHARCODE_MODE
+			, datLen = this.DATA_LENGTH36
+		;
+		// console.log(keyId);
+		for(ch in edat){
+			chstr = this.pad0((ch | 0).toString(mode), datLen.ch); //+2
+
+			for(type in edat[ch]){
+				timeDatsNum = 0;
+				for(time in edat[ch][type]){
+					timeDatsNum++;
+				}
+				
+				typestr = this.pad0((prop[type].id | 0).toString(mode), datLen.type);//+2
+				typestr += this.pad0((timeDatsNum | 0).toString(mode), datLen.timeval);//+4
+				for(time in edat[ch][type]){
+					typestr += this.pad0((time | 0).toString(mode), datLen.time);//+6
+					typestr += this.pad0(((edat[ch][type][time].value | 0) - prop[type].min).toString(mode), datLen.value);//+2
+				}
+				if(timeDatsNum == 0){continue;}
+				str += chstr + typestr;
+			}
+		}
+		
+		return str;
+	},
+	
+	dataStrToCharCode: function(str)
+	{
+		var i, len, clen = 0, sepLen = this.CHARCODE_LENGTH36
+			, charCode = ''
+		;
+		len = str.length;
+		if(len % sepLen > 0){
+			str += '00000000'.substr(0, sepLen - (len % sepLen));
+			len += len % sepLen;
+		}
+		
+		while(len > clen){
+			charCode += String.fromCharCode(parseInt(str.substr(clen, sepLen), 16));
+			clen += sepLen;
+		}
+		return charCode;
+	},
+	//%04%E6%90%80%E2%B0%80%EF%90%80%EB%B0%80
+	
+	charCodeToDataStr: function(code)
+	{
+		var sepLen = this.CHARCODE_LENGTH36, clen = code.length
+			, rlen = 0, str = '', sepStr
+		, mode = this.CHARCODE_MODE
+		;
+		while(clen > rlen){
+			sepStr = code.substr(rlen, 1).charCodeAt(0).toString(mode);
+			str += '00000000'.substr(0, sepLen - sepStr.length) + sepStr;
+			rlen += 1;
+		}
+		return str;
+	},
+	//datastr parse のみ有効
+	timevalData: function(type, timeval)
+	{
+		var i, res = {}, datLen = this.DATA_LENGTH36
+		, mode = this.CHARCODE_MODE
+		, chunkLen = datLen.time + datLen.value
+		, length = (timeval.length / chunkLen) | 0
+		, time, value
+		, prop = AudioChannel.tuneParamsProp
+		;
+		for(i = 0; i < length; i++){
+			time = parseInt(timeval.substr(chunkLen * i, datLen.time), mode);
+			value = parseInt(timeval.substr((chunkLen * i) + datLen.time, datLen.value), mode) + prop[type].min;
+			res[time] = {type: type, time: time, value: value};
+		}
+		return res;
+	},
+	
+	parseHeaderStr: function(str)
+	{
+		// '[version]' '[auth]' '[title]' 
+		var start, len, deli;
+		for(key in this.headerParamDelimiters){
+			deli = this.headerParamDelimiters[key];
+			start = str.lastIndexOf(deli) + deli.length;
+			len = str.indexOf('[', start) - start;
+			this.headerParams[key] = len < 0 ? '' : str.substr(start, len);
+		}
+		return this.headerParams;
+	},
+	
+	parseDataStr: function(data)
+	{
+		var dlen
+			, mode = this.CHARCODE_MODE
+			, datLen = this.DATA_LENGTH36
+			, rlen = 0, res = '', tvalLen = 0
+			, idKey
+			, minLen = datLen.ch + datLen.type + datLen.timeval
+			, delim = this.dataHeaderDelimiter, headerParams = {}
+			, eventsetData = makeEventsetData();
+		;
+		headerParams = this.parseHeaderStr(data.substr(0, data.lastIndexOf(delim)));
+		idKey = AudioChannel.tuneParamsIDKey(headerParams.fversion.split('.')[0]);
+		data = data.substr(data.lastIndexOf(delim) + delim.length);
+		dlen = data.length;
+
+		while(dlen > rlen + minLen){
+			ch = parseInt(data.substr(rlen, this.DATA_LENGTH36.ch), mode);
+			rlen += this.DATA_LENGTH36.ch;
+			type = idKey[parseInt(data.substr(rlen, this.DATA_LENGTH36.type), mode) | 0];
+			rlen += this.DATA_LENGTH36.type;
+			tvalLen = parseInt(data.substr(rlen, this.DATA_LENGTH36.timeval), mode);
+			rlen += this.DATA_LENGTH36.timeval;
+			tval = this.timevalData(type, data.substr(rlen, (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen));
+			rlen += (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen;
+			if(eventsetData[ch] == null){
+				eventsetData[ch] = {};
+			}
+			eventsetData[ch][type] = tval;
+		}
+		
+		return eventsetData;
+	},
+	
+	dataComponent: function(litroCurrentFile){
+		var data, current = litroCurrentFile
+		;
+// 		litroCurrentFile: title playerAccount eventsetData 
+		data = encodeURIComponent(this.headerInfo(current) + this.dataToString(current.eventsetData));
+		return data;
+	},
+};
 
 
 var APIServer = {url: null};
