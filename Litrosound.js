@@ -951,30 +951,30 @@ LitroPlayer.prototype = {
 		return this.channel[ch].noteKey;
 	},	
 	
-	getPhase: function(ch, refEnable)
-	{
-		if(this.channel[ch] == null){return '';}
-		var clock = this.channel[ch].envelopeClock
-			, env = this.getEnvelopes(ch, refEnable)
-			;
-		clock -= env.attack;
-		if(clock < 0){return 'a';}
-	
-		clock -= env.hold;
-		if(clock < 0){return 'h';}
-	
-		clock -= env.decay;
-		if(clock < 0){return 'd';}
-	
-		clock -= env.length;
-		if(clock < 0){ return 's';}
-		
-		clock -= env.release;
-		if(clock < 0){ return 'r';}
-		
-		return '';
-		// return phase(this.channel[ch]);
-	},
+	// getPhase: function(ch, refEnable)
+	// {
+		// if(this.channel[ch] == null){return '';}
+		// var clock = this.channel[ch].envelopeClock
+			// , env = this.getEnvelopes(ch, refEnable)
+			// ;
+		// clock -= env.attack;
+		// if(clock < 0){return 'a';}
+// 	
+		// clock -= env.hold;
+		// if(clock < 0){return 'h';}
+// 	
+		// clock -= env.decay;
+		// if(clock < 0){return 'd';}
+// 	
+		// clock -= env.length;
+		// if(clock < 0){ return 's';}
+// 		
+		// clock -= env.release;
+		// if(clock < 0){ return 'r';}
+// 		
+		// return '';
+		// // return phase(this.channel[ch]);
+	// },
 	
 	getChannel: function(ch, key, refEnable)
 	{
@@ -993,12 +993,15 @@ LitroPlayer.prototype = {
 		return this.channel[ch].tuneParams;
 	},
 	
-	getEnvelopes: function(ch, refEnable)
+	//TODO refEnable廃止
+	getEnvelopes: function(ch)
 	{
-		if(this.channel[ch].refChannel >= 0){
-			ch = refEnable ? this.channel[ch].refChannel : ch;
-		}
-		return this.channel[ch].envelopes;
+		// if(this.channel[ch].refChannel >= 0){
+			// ch = refEnable ? this.channel[ch].refChannel : ch;
+		// }
+		var channel = this.channel[ch]
+			, ref = channel.referChannelFunc()
+		return ref == null ? channel.envelopes : ref.envelopes;
 	},
 	
 	getVibratos: function(ch, refEnable)
@@ -1018,12 +1021,15 @@ LitroPlayer.prototype = {
 	},
 
 	
-	envelopeWaveType: function(ch, refEnable)
+	envelopeWaveType: function(ch)
 	{
-		var refch = refEnable ? this.channel[ch].refChannel : ch
+		var channel = this.channel[ch]
+			, refChannel = channel.referChannelFunc()
+			// , refch = refEnable ? this.channel[ch].refChannel : ch
+			, refEnable = true
 			, res;
 		;
-		switch(this.getPhase(ch, refEnable)){
+		switch(channel.getPhase(refChannel)){
 			case 'a': res = this.getChannel(ch, 'waveTypeAttack', refEnable); break;
 			case 'h': res = this.getChannel(ch, 'waveTypeHold', refEnable); break;
 			case 'd': res = this.getChannel(ch, 'waveTypeDecay', refEnable); break;
@@ -1032,50 +1038,51 @@ LitroPlayer.prototype = {
 		return res < 0 ? this.getChannel(ch, 'waveType', refEnable) : res;
 	},
 
-	envelopedVolume: function(ch)
-	{
-		if(!this.channel[ch].isEnable()){return 0;}
-		// printDebug(ch);
-		var i
-		, channel = this.channel[ch]
-		, vol = (1 / 2) / channel.WAVE_VOLUME_RESOLUTION  // +1 / -1 
-		, clock = channel.envelopeClock
-		, env = this.getEnvelopes(ch, true)
-		, sLevel = env.sustain
-		, svol = vol * sLevel
-		;
-		if(!channel.envelopeStart){return 0;}
-		vol = vol * env.volumeLevel;
-		switch(this.getPhase(ch, true)){
-			case 'a': 
-				d = vol / env.attack;
-				vol = clock * d;
-				break;
-			case 'h': 
-				clock -= env.attack;
-				break;
-			case 'd': 
-				clock -= env.attack + env.hold;
-				d = (vol - svol) / env.decay;
-				vol -= clock * d;
-				break;
-			case 's': 
-				clock -= env.attack + env.hold + env.decay;
-				vol = svol;
-				break;
-			case 'r': 
-				clock -= env.length + env.attack + env.hold + env.decay;
-				d = (svol) / env.release;
-				vol = svol - (clock * d);
-				break;
-			default: vol = 0; break;
-		}
-		
-		if(isNaN(vol)){
-			console.log(this.getPhase(ch, true));
-		}
-		return vol;
-	},
+	// TODO LitroWaveChannelに移行中
+	// envelopedVolume: function(ch)
+	// {
+		// if(!this.channel[ch].isEnable()){return 0;}
+		// // printDebug(ch);
+		// var i
+		// , channel = this.channel[ch]
+		// , vol = (1 / 2) / channel.WAVE_VOLUME_RESOLUTION  // +1 / -1 
+		// , clock = channel.envelopeClock
+		// , env = this.getEnvelopes(ch, true)
+		// , sLevel = env.sustain
+		// , svol = vol * sLevel
+		// ;
+		// if(!channel.envelopeStart){return 0;}
+		// vol = vol * env.volumeLevel;
+		// switch(this.getPhase(ch, true)){
+			// case 'a': 
+				// d = vol / env.attack;
+				// vol = clock * d;
+				// break;
+			// case 'h': 
+				// clock -= env.attack;
+				// break;
+			// case 'd': 
+				// clock -= env.attack + env.hold;
+				// d = (vol - svol) / env.decay;
+				// vol -= clock * d;
+				// break;
+			// case 's': 
+				// clock -= env.attack + env.hold + env.decay;
+				// vol = svol;
+				// break;
+			// case 'r': 
+				// clock -= env.length + env.attack + env.hold + env.decay;
+				// d = (svol) / env.release;
+				// vol = svol - (clock * d);
+				// break;
+			// default: vol = 0; break;
+		// }
+// 		
+		// if(isNaN(vol)){
+			// console.log(this.getPhase(ch, true));
+		// }
+		// return vol;
+	// },
 	
 	//channel setter
 	setOnNoteKeyEvent: function(func){
@@ -1084,6 +1091,13 @@ LitroPlayer.prototype = {
 	
 	setOffNoteKeyEvent: function(func){
 		this.offNoteKeyEventFunc = func;
+	},
+	
+	setReferChannelFunc: function(func){
+		var ch;
+		for(ch = 0; ch < this.channel.length; ch++){
+			this.channel[ch].referChannelFunc = func;
+		}
 	},
 	
 	setWaveType: function(channelNum, type)
@@ -2376,6 +2390,7 @@ LitroWaveChannel.prototype = {
 		this.bufferSize = datasize;
 		this.dataUpdateFlag = false;//不要？
 		this.refChannel = -1;
+		this.referChannelFunc = function(){return;}
 		this.noteKey = -1;
 		this.noiseParam = {
 			volume : 0,
@@ -2422,7 +2437,7 @@ LitroWaveChannel.prototype = {
 	{
 		var clock = this.envelopeClock
 			, channel = refChannel == null ? this : refChannel
-			, env = this.envelopes
+			, env = channel.envelopes
 			;
 		clock -= env.attack;
 		if(clock < 0){return 'a';}
@@ -2443,21 +2458,24 @@ LitroWaveChannel.prototype = {
 		// return phase(this.channel[ch]);
 	},
 	
-	envelopedVolume: function(refChannel)
+	envelopedVolume: function()
 	{
 		if(!this.isEnable()){return 0;}
 		// printDebug(ch);
 		var i
-		, channel = refChannel == null ? this : refChannel
+		, refChannel = this.referChannelFunc()
+		// , refEnabled = refChannel == null ? false : true
+		, channel = this
 		, vol = (1 / 2) / channel.WAVE_VOLUME_RESOLUTION  // +1 / -1 
 		, clock = channel.envelopeClock
-		, env = channel.envelopes
+		, env = refChannel == null ? channel.envelopes : refChannel.envelopes
 		, sLevel = env.sustain
 		, svol = vol * sLevel
 		;
+		
 		if(!channel.envelopeStart){channel = null; return 0;}
 		vol = vol * env.volumeLevel;
-		switch(channel.getPhase(ch, true)){
+		switch(channel.getPhase(refChannel)){
 			case 'a': 
 				d = vol / env.attack;
 				vol = clock * d;
@@ -2481,11 +2499,11 @@ LitroWaveChannel.prototype = {
 				break;
 			default: vol = 0; break;
 		}
-		
 		if(isNaN(vol)){
-			console.log(this.getPhase(ch, true));
+			console.log(this.getPhase(refChannel));
 		}
 		channel = null;
+		refChannel = null;
 		return vol;
 	},
 	
@@ -2561,6 +2579,7 @@ LitroWaveChannel.prototype = {
 		return this.tuneParams.enable == 1;
 	},
 	
+	//Setter
 	resetEnvelope: function()
 	{
 		this.envelopeClock = 0;
