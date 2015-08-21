@@ -1881,12 +1881,7 @@ LitroWaveChannel.tuneParamsIDKey = function(paramsVersion)
 
 LitroWaveChannel.maxTune = function(name)
 {
-	try{
 	return LitroWaveChannel.tuneParamsProp[name].max;
-		
-	}catch(e){
-		console.log(name);
-	}
 	// return LitroWaveChannel.tuneParamsMax[name];
 };
 LitroWaveChannel.minTune = function(name)
