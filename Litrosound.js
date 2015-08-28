@@ -802,7 +802,7 @@ LitroPlayer.prototype = {
 			return;
 		}
 		this.channel[channel].resetEnvelope();
-		this.setFrequency(channel, 0);
+		// this.setFrequency(channel, 0);
 
 	},
 	
@@ -1090,6 +1090,7 @@ LitroPlayer.prototype = {
 		//TODO connectリセット処理が必要かも
 		// litroSoundInstance.connectOff();
 		// litroSoundInstance.connectOn();
+				
 	},
 	
 	stop: function(toggle)
@@ -1097,6 +1098,14 @@ LitroPlayer.prototype = {
 		this.systemTime = performance.now();
 		this.playSoundFlag = false;
 		this.delayEventset = makeEventsetData();
+
+	},
+	
+	finishChannelEnvelope: function(){
+		var i, channel = this.channel;
+		for(i = 0; i < channel.length; i++){
+			channel[i].finishEnvelope();
+		}
 	},
 	
 	volume: function(vol)
