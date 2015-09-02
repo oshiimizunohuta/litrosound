@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.09.00
+ * ver 0.10.00
  */
-var LITROSOUND_VERSION = '0.09.00';
+var LITROSOUND_VERSION = '0.10.00';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -477,9 +477,9 @@ LitroPlayer.prototype = {
 
 		// this.HEADER_LENGTH = 64;
 		if(window.location.href.indexOf('.bitchunk.') >= 0){
-			this.SERVER_URL = 'http://ltsnd.bitchunk.net/api';
+			this.SERVER_URL = '//ltsnd.bitchunk.net/api';
 		}else if(window.location.href.indexOf('localhost') >= 0){
-			this.SERVER_URL = 'http://localhost:58104/api';	
+			this.SERVER_URL = '//localhost:58104/api';	
 		}else{
 			this.SERVER_URL = 'http://bitchunk.fam.cx/litrosound/api';
 		}
