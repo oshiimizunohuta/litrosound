@@ -477,7 +477,7 @@ LitroPlayer.prototype = {
 
 		// this.HEADER_LENGTH = 64;
 		if(window.location.href.indexOf('.bitchunk.') >= 0){
-			this.SERVER_URL = '//ltsnd.bitchunk.net/api';
+			this.SERVER_URL = 'https://ltsnd.bitchunk.net/api';
 		}else if(window.location.href.indexOf('localhost') >= 0){
 			this.SERVER_URL = '//localhost:58104/api';	
 		}else{
