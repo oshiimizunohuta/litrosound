@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.00
+ * ver 0.11.02
  */
-var LITROSOUND_VERSION = '0.11.00';
+var LITROSOUND_VERSION = '0.11.02';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -71,11 +71,12 @@ var testval = 0;
 LitroSound.version = LITROSOUND_VERSION;
 LitroSound.prototype = {
 	init : function(channelNum) {
+		channelNum = channelNum == null ? CHANNELS_NUM
 		this.isFirefox = (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) ? true : false;
 		this.channel = [];
 		this.channel.length = channelNum;
-		this.channel_s = [];
-		this.channel_s.length = channelNum;
+		// this.channel_s = [];
+		// this.channel_s.length = channelNum;
 		
 		// this.players = {};
 		this.players = [];
@@ -407,6 +408,7 @@ LitroPlayer.prototype = {
 		this.systemTime = 0;
 		// this.VOLUME_INC = 0.1;
 		this.playOnce = false; //1曲モード
+		this.tmpEnable = false; //一時リスタートモード(編集用)
 		this.enablePrestart = false; //仮
 		this.name = name;
 		
@@ -414,6 +416,9 @@ LitroPlayer.prototype = {
 		this.setChannelEventFunc = function(){return;};
 		this.onNoteKeyEventFunc =  function(){return;};
 		this.offNoteKeyEventFunc =  function(){return;};
+		
+		this.onPlayFunc = function(){return;};
+		this.onStopFunc = function(){return;};
 		
 		this.eventsetData = []; //ControllChangeともいう
 		this.delayEventset = [];
@@ -729,7 +734,6 @@ LitroPlayer.prototype = {
 		// console.log(codenum + ' ' + octave);
 		var channel = this.channel[ch], freq = freqByKey(key)
 		;
-
 		channel.noteKey = key;
 		// console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
 		if(this.isSweepNotes(ch) && !this.isFinishEnvelope(ch)){
@@ -841,7 +845,6 @@ LitroPlayer.prototype = {
 		channel.sweepNotesTarget = freqByKey(targetNote.value);
 		channel.sweepNotesRate = ((sample / channel.sweepNotesTarget) - (sample / channel.sweepNotesBase)) / (targetNote.time - baseNote.time);
 		channel.sweepNotesClock = 0;
-		// console.log(channel.staticWaveLength, channel.waveLength);
 		channel.setFrequency(channel.sweepNotesBase);
 		//staticwavelengthの更新が必須(要setfrequency)
 		// channel.setWaveLength(sample / channel.sweepNotesBase);
@@ -1089,6 +1092,16 @@ LitroPlayer.prototype = {
 		return true;
 	},
 	
+	setOnPlayFunc: function(func)
+	{
+		this.onPlayFunc = func;
+	},
+	
+	setOnStopFunc: function(func)
+	{
+		this.onStopFunc = func;
+	},
+	
 	play: function()
 	{
 		this.systemTime = performance.now();
@@ -1102,6 +1115,7 @@ LitroPlayer.prototype = {
 		// litroSoundInstance.connectOff();
 		// litroSoundInstance.connectOn();
 				
+		this.onPlayFunc();
 	},
 	
 	stop: function(toggle)
@@ -1110,6 +1124,8 @@ LitroPlayer.prototype = {
 		this.playSoundFlag = false;
 		this.delayEventset = makeEventsetData();
 		this.finishChannelEnvelope();
+		
+		this.onStopFunc();
 
 	},
 	
@@ -1118,7 +1134,7 @@ LitroPlayer.prototype = {
 		for(i = 0; i < channel.length; i++){
 			channel[i].skipEnvelope();
 			this.setSweepNoteOn(i, false);
-			// this.clearSweepNotes(i);
+			this.clearSweepNotes(i);
 		}
 	},
 	
@@ -1162,19 +1178,23 @@ LitroPlayer.prototype = {
 	{
 		// var tuneId = LitroWaveChannel.tuneParamsID;
 		var tuneProp = LitroWaveChannel.tuneParamsProp
+			, restart
+			;
 		if(type == 'note'){
 			this.onNoteKey(ch, value);
 			this.refreshSweepNotes(ch);
 		}else if(type == 'event'){
 			switch(value){
 				case tuneProp['return'].id:
-					if(this.playOnce){
+					restart = this.commonEventTime('restart');
+					if(this.playOnce || (restart == -1)){
 						this.stop();
 						return true;
 					}
 					if(!this.isPlay()){
-						return;
+						return true;
 					}
+					
 					this.seekMoveBack(-1);
 					this.seekMoveForward(this.commonEventTime('restart'));
 					this.delayEventset = makeEventsetData();
@@ -1182,6 +1202,9 @@ LitroPlayer.prototype = {
 					return true;
 					
 				case tuneProp.tmpend.id:
+					if(!this.tmpEnable){
+						return true;
+					}
 					this.seekMoveBack(-1);
 					this.seekMoveForward(this.commonEventTime('tmpstart'));
 					this.delayEventset = makeEventsetData();
@@ -1256,6 +1279,9 @@ LitroPlayer.prototype = {
 		for(t = 0; t < perFrameTime; t++){
 			for(ch = 0; ch < clen; ch++){
 				looped |= this.scanEdata(ch, eData);
+			}
+			if(!this.isPlay()){
+				return;
 			}
 			for(ch = 0; ch < clen; ch++){
 				looped |= this.scanDelayedEdata(ch, dData);
@@ -1853,25 +1879,25 @@ LitroWaveChannel.tuneParamsProp = {
 	noteoff:{id: 7, max: Infinity, min: 0, 'default': 0},
 	noteextend:{id: 8, max: Infinity, min: 0, 'default': 0},
 
-	sweepnotes:{id: 16, max: Infinity, min: 0}, //v0.2
-	meeknotes:{id: 17, max: Infinity, min: 0}, //v0.2
+	sweepnotes:{id: 16, max: Infinity, min: 0, 'default': 0}, //v0.2
+	meeknotes:{id: 17, max: Infinity, min: 0, 'default': 0}, //v0.2
 	
-	refstart1:{id: 64, max: Infinity, min: 0}, //v0.2
-	refend1:{id: 65, max: Infinity, min: 0},
-	refstart2:{id: 66, max: Infinity, min: 0},
-	refend2:{id: 67, max: Infinity, min: 0},
-	refstart3:{id: 68, max: Infinity, min: 0},
-	refend3:{id: 69, max: Infinity, min: 0},
-	refstart4:{id: 70, max: Infinity, min: 0},
-	refend4:{id: 71, max: Infinity, min: 0},
-	refstart5:{id: 72, max: Infinity, min: 0},
-	refend5:{id: 73, max: Infinity, min: 0},
-	refstart6:{id: 74, max: Infinity, min: 0},
-	refend6:{id: 75, max: Infinity, min: 0},
-	refstart7:{id: 76, max: Infinity, min: 0},
-	refend7:{id: 77, max: Infinity, min: 0},
-	refstart8:{id: 78, max: Infinity, min: 0},
-	refend8:{id: 79, max: Infinity, min: 0},
+	refstart1:{id: 64, max: Infinity, min: 0, 'default': 0}, //v0.2
+	refend1:{id: 65, max: Infinity, min: 0, 'default': 0},
+	refstart2:{id: 66, max: Infinity, min: 0, 'default': 0},
+	refend2:{id: 67, max: Infinity, min: 0, 'default': 0},
+	refstart3:{id: 68, max: Infinity, min: 0, 'default': 0},
+	refend3:{id: 69, max: Infinity, min: 0, 'default': 0},
+	refstart4:{id: 70, max: Infinity, min: 0, 'default': 0},
+	refend4:{id: 71, max: Infinity, min: 0, 'default': 0},
+	refstart5:{id: 72, max: Infinity, min: 0, 'default': 0},
+	refend5:{id: 73, max: Infinity, min: 0, 'default': 0},
+	refstart6:{id: 74, max: Infinity, min: 0, 'default': 0},
+	refend6:{id: 75, max: Infinity, min: 0, 'default': 0},
+	refstart7:{id: 76, max: Infinity, min: 0, 'default': 0},
+	refend7:{id: 77, max: Infinity, min: 0, 'default': 0},
+	refstart8:{id: 78, max: Infinity, min: 0, 'default': 0},
+	refend8:{id: 79, max: Infinity, min: 0, 'default': 0},
 
 	'event': {id: 127, max: 255, min: 0, 'default': 0},
 	note: {id: 128, max: 255, min: 0, 'default': 0},
@@ -1881,11 +1907,11 @@ LitroWaveChannel.tuneParamsProp = {
 	
 	volumeLevel:{id: 131, max: 15, min: 0, 'default': 12},
 	attack:{id: 132, max: 64, min: 0, 'default': 0},
-	hold:{id: 133, max: 255, min: 0}, //v0.1(v0.8)
-	decay:{id: 134, max: 64, min: 0},
-	sustain:{id: 135, max: 15, min: 0},
-	length:{id: 136, max: 255, min: 0},
-	release:{id: 137, max: 255, min: 0},
+	hold:{id: 133, max: 255, min: 0, 'default': 0}, //v0.1(v0.8)
+	decay:{id: 134, max: 64, min: 0, 'default': 0},
+	sustain:{id: 135, max: 15, min: 0, 'default': 10},
+	length:{id: 136, max: 255, min: 0, 'default': 32},
+	release:{id: 137, max: 255, min: 0, 'default': 0},
 	
 	delay:{id: 140, max: 255, min: 0, 'default': 0},
 	detune:{id: 141, max: 127, min: -127, 'default': 0},
@@ -1978,6 +2004,11 @@ LitroWaveChannel.minTune = function(name)
 
 // LitroWaveChannel.baseVolume = 1 / WAVE_VOLUME_RESOLUTION;
 LitroWaveChannel.offsetVolume = WAVE_VOLUME_RESOLUTION / 2;
+
+function litroTuneProp(key)
+{
+	return LitroWaveChannel.tuneParamsProp[key];
+}
 
 LitroWaveChannel.prototype = {
 	init:function(datasize, resolution){
