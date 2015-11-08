@@ -71,7 +71,7 @@ var testval = 0;
 LitroSound.version = LITROSOUND_VERSION;
 LitroSound.prototype = {
 	init : function(channelNum) {
-		channelNum = channelNum == null ? CHANNELS_NUM
+		channelNum = channelNum == null ? CHANNELS_NUM : channelNum;
 		this.isFirefox = (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) ? true : false;
 		this.channel = [];
 		this.channel.length = channelNum;
