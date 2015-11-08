@@ -1969,21 +1969,36 @@ LitroWaveChannel.noiseParam = {
  */
 LitroWaveChannel.tuneParamsIDKey = function(paramsVersion)
 {
-	var k, keys = {}, props;
+	var k, keys = {}, props, verList, v;
 	props = LitroWaveChannel.tuneParamsProp;
 	for(k in props){
 		keys[props[k].id] = k;
 	}
 	
+	verList = Object.keys(LitroWaveChannel.diffListTuneParamsProp);
+	verList.reverse();
 	//ファイルバージョン差分対応
+	
+	if(paramsVersion == LitroWaveChannel.paramsVersion){
+		return keys;
+	}
+
 	if(paramsVersion != null && !isNaN(parseInt(paramsVersion, 10))){
-		props = LitroWaveChannel.diffListTuneParamsProp;
-		if(paramsVersion in props){
-			props = props[paramsVersion];
+		if(verList.indexOf(paramsVersion) == -1){
+			console.log("file version:" + paramsVersion + " -> unknown version");
+			return keys;
+		}
+		for(v = 0; v < verList.length; v++){
+			props = LitroWaveChannel.diffListTuneParamsProp[verList[v]];
+			// props = props[paramsVersion];
 			for(k in props){
 				keys[props[k].id] = k;
 			}
+			if(verList[v] == paramsVersion){
+				break;
+			}
 		}
+		console.log(keys);
 		console.log("file version:" + paramsVersion + " -> " + LitroWaveChannel.paramsVersion);
 	}
 
