@@ -440,7 +440,8 @@ LitroPlayer.prototype = {
 		}else if(window.location.href.indexOf('localhost') >= 0){
 			this.SERVER_URL = '//localhost:58104/api';	
 		}else{
-			this.SERVER_URL = 'http://bitchunk.fam.cx/litrosound/api';
+			this.SERVER_URL = '//ltsnd.bitchunk.net/api';
+			// this.SERVER_URL = 'http://bitchunk.fam.cx/litrosound/api';
 		}
 		initAPIServer(this.SERVER_URL);
 		// this.COMMON_TUNE_CH = this.litroSound.channel.length;
@@ -980,7 +981,7 @@ LitroPlayer.prototype = {
 			, packFiles = self.playPack.packFiles
 			, packTitles = self.playPack.packTitles
 			, packIDs = self.playPack.packIDs
-				, lp = new LitroSoundParser();
+			, lp = new LitroSoundParser();
 			if(data == null || data == false){
 				errorFunc(data);
 			}
@@ -996,6 +997,11 @@ LitroPlayer.prototype = {
 			
 			func(packFiles);
 			}, errorFunc);
+	},
+	
+	loadPack: function(query, successFunc, errorFunc)
+	{
+		this.playPack.loadPack(query, successFunc, errorFunc);
 	},
 	
 	packListFromServer: function(user_id, page, limit, func, errorFunc)
@@ -1511,20 +1517,36 @@ LitroPlayPack.prototype = {
 		var self = this
 			, params = {pack_query: pack_query}
 		;
-		// if(user_id == 0){
-			// errorFunc({error_code: 0, message: 'no user_id'});
-			// return;
-		// }
-		if(packName == null){
-			errorFunc({error_code: 0, message: 'no Package Name'});
-			return;
-		}
 		func = func == null ? function(){return;} : func;
 		errorFunc = errorFunc == null ? function(){return;} : errorFunc;
+		if(pack_query == null){
+			errorFunc({error_code: 0, message: 'no query'});
+			return;
+		}
 		
 		//data : {sound_id, ?}
 		sendToAPIServer('GET', 'packload', params, function(data){
-			var i;
+			var i
+			, packFiles = self.packFiles
+			, packTitles = self.packTitles
+			, packIDs = self.packIDs
+			, lp = new LitroSoundParser();
+			if(data == null || data == false){
+				errorFunc(data);
+			}
+			// console.log(data, lp.parseDataStr(data));
+			for(i = 0; i < data.length; i++){
+				data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
+				packFiles.push(data[i]);
+				packTitles.push(data[i].title);
+				packIDs.push(data[i].sound_id);
+			}
+			
+			self.setPlayDataFromPackIndex(sename, 0);
+			
+			func(packFiles);
+			}, errorFunc);
+			
 			if(data == null || data == false){
 				errorFunc(data);
 			}
@@ -1534,10 +1556,32 @@ LitroPlayPack.prototype = {
 				self.packList[packName][data[i].title] = data[i];
 			}
 			
-			func(self.packList[packName]);
-			}, errorFunc);
+			// func(self.packList[packName]);
+			// }, errorFunc);
 	},
 	
+	packReceive: function(data)
+	{
+		var i
+		, packFiles = this.packFiles
+		, packTitles = this.packTitles
+		, packIDs = this.packIDs
+		, lp = new LitroSoundParser();
+		if(data == null || data == false){
+			errorFunc(data);
+		}
+		// console.log(data, lp.parseDataStr(data));
+		for(i = 0; i < data.length; i++){
+			data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
+			packFiles.push(data[i]);
+			packTitles.push(data[i].title);
+			packIDs.push(data[i].sound_id);
+		}
+		
+		// this.setPlayDataFromPackIndex(, 0);
+		
+		func(packFiles);	
+	},
 };
 
 //TODO parserを作る？
@@ -1998,7 +2042,6 @@ LitroWaveChannel.tuneParamsIDKey = function(paramsVersion)
 				break;
 			}
 		}
-		console.log(keys);
 		console.log("file version:" + paramsVersion + " -> " + LitroWaveChannel.paramsVersion);
 	}
 
