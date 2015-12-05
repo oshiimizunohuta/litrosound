@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.02
+ * ver 0.11.03
  */
-var LITROSOUND_VERSION = '0.11.02';
+var LITROSOUND_VERSION = '0.11.03';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -1530,8 +1530,14 @@ LitroPlayPack.prototype = {
 	loadPack: function(user_id, pack_query, func, errorFunc)
 	{
 		var self = this
-			, params = {user_id: user_id, pack_query: pack_query}
+			, params = {pack_query: pack_query}
 		;
+		//both type user load
+		if(typeof user_id == 'string'){
+			params.account = user_id;
+		}else{
+			params.user_id = user_id;
+		}
 		func = func == null ? function(){return;} : func;
 		errorFunc = errorFunc == null ? function(e){console.log('load pack error: ', e); return;} : errorFunc;
 		if(pack_query == null){
@@ -2561,6 +2567,25 @@ LitroWaveMemoryHolder.prototype = {
 		// return data.func == null ? data.data : data.func(data.data);
 	},
 };
+
+function LTSND(user, pack, func){
+	var soundEngin
+		, sePlayer, bgmPlayer
+		, ltsnd = {engin: soundEngin, se: sePlayer, bgm: bgmPlayer}
+	;
+	window.addEventListener('load', function(){
+		ltsnd.engin = new LitroSound();
+		ltsnd.engin.init();
+		ltsnd.se = new LitroPlayer();
+		ltsnd.bgm = new LitroPlayer();
+		
+		ltsnd.se.init('se');
+		// bgmPlayer.init('bgm');
+		ltsnd.se.loadPack(user, "name:" + pack, func(ltsnd));
+	});
+	
+	return ltsnd
+}
 
 // var start = function() {
 // };
