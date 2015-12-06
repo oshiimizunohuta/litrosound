@@ -267,6 +267,27 @@ LitroSound.prototype = {
 		this.scriptProcess.onaudioprocess = null;
 		this.gain.disconnect();
 	},
+	
+	setTouchOuth: function(eQuery)
+	{
+		var e, type = typeof eQuery, self = this;
+		if(type == 'string'){
+			e = document.querySelectorAll(eQuery);
+		}else{
+			e = type == 'array' ? eQuery : [eQuery];
+		}
+		
+		function onoff(){
+			self.connectOff();
+			self.connectOn();
+		}
+		Array.prototype.map.call(e, function(elm){
+			elm.addEventListener('touch', onoff, false);
+		});
+		Array.prototype.map.call(e, function(elm){
+			elm.removeEventListener('touch', onoff, false);
+		});
+	},
 
 	bufferProcess: function(ev)
 	{
@@ -817,7 +838,7 @@ LitroPlayer.prototype = {
 	
 	clearSweepNotes: function(ch)
 	{
-		var channel = this.channel[ch]
+		var channel = this.channel[ch];
 		channel.setFrequency(channel.sweepNotesTarget);
 		channel.sweepNotesBase = null;
 		channel.sweepNotesTarget = null;
@@ -2547,10 +2568,10 @@ LitroWaveMemoryHolder.prototype = {
 			return data;
 		};
 		
-		this.append(function(data, channel){return noiseFunc(data, channel, 1)}, 'noise/1', 1);
-		this.append(function(data, channel){return noiseFunc(data, channel, 6)}, 'noise/6', 1);
-		this.append(function(data, channel){return noiseFunc(data, channel, 12)}, 'noise/12', 1);
-		this.append(function(data, channel){return noiseFunc(data, channel, 15)}, 'noise/15', 1);
+		this.append(function(data, channel){return noiseFunc(data, channel, 1);}, 'noise/1', 1);
+		this.append(function(data, channel){return noiseFunc(data, channel, 6);}, 'noise/6', 1);
+		this.append(function(data, channel){return noiseFunc(data, channel, 12);}, 'noise/12', 1);
+		this.append(function(data, channel){return noiseFunc(data, channel, 15);}, 'noise/15', 1);
 	},
 	
 	append: function(data, name, offset){
@@ -2576,16 +2597,18 @@ function LTSND(user, pack, func){
 	window.addEventListener('load', function(){
 		ltsnd.engin = new LitroSound();
 		ltsnd.engin.init();
+		ltsnd.engin.setTouchOuth('body');
 		ltsnd.se = new LitroPlayer();
 		ltsnd.bgm = new LitroPlayer();
 		
 		ltsnd.se.init('se');
 		// bgmPlayer.init('bgm');
 		ltsnd.se.loadPack(user, "name:" + pack, func(ltsnd));
-	});
+	}, false);
 	
-	return ltsnd
+	return ltsnd;
 }
+
 
 // var start = function() {
 // };
@@ -2621,17 +2644,7 @@ function freqByKey(key){
 //call at 60fps
 function litroSoundMain()
 {
-	// litroSoundInstance.checkPerformance();
-	// var ch;
-	// for(ch = 0; ch < CHANNELS_NUM; ch++){
-		// litroSoundInstance.refreshWave(ch);
-	// }
-	// if(litroSoundInstance.channel != null){
-		// printDebug(litroSoundInstance.channel[0].waveClockPosition, 1);
-		// printDebug(litroSoundInstance.channel[0].absorbPosition, 0);
-		// , this.waveClockPosition, this.absorbPosition
-	// }
-	// litroPlayerInstance.playSound();
+	return;
 };
 
 
