@@ -280,12 +280,12 @@ LitroSound.prototype = {
 		function onoff(){
 			self.connectOff();
 			self.connectOn();
+			Array.prototype.map.call(e, function(elm){
+				elm.removeEventListener('touchstart', onoff, false);
+			});
 		}
 		Array.prototype.map.call(e, function(elm){
-			elm.addEventListener('touch', onoff, false);
-		});
-		Array.prototype.map.call(e, function(elm){
-			elm.removeEventListener('touch', onoff, false);
+			elm.addEventListener('touchstart', onoff, false);
 		});
 	},
 
