@@ -589,10 +589,14 @@ LitroPlayer.prototype = {
 	setOffNoteKeyEvent: function(func){
 		this.offNoteKeyEventFunc = func;
 	},
-	
+	/**
+	 *note target sweep
+	 */
 	setSweepNoteOn: function(ch, enable)
 	{
 		this.channel[ch].sweepNotesOn = enable;
+		// console.log('set', ch);
+
 		// this.refreshSweepNotes(ch);
 	},
 	
@@ -695,14 +699,16 @@ LitroPlayer.prototype = {
 		if(channel.envelopeStart && channel.envelopeClock == 0 && !channel.envelopeEnd && enable){
 			abst = channel.data[channel.waveClockPosition];
 			channel.startEnvelope();
+			// this.refreshSweepNotes(ch);
 			startTrig = true;
-
 		}
 		//立ち下がり
 		else if(this.isFinishEnvelope(channelNum) && !channel.envelopeEnd && enable){
 			abst = channel.data[channel.waveClockPosition];
 			channel.endEnvelope();
 			this.offNoteKeyEventFunc(channelNum.id, channel.noteKey);
+			this.clearSweepNotes(ch);
+			this.setSweepNoteOn(ch, false);
 			endTrig = true;
 		}
 		
@@ -759,8 +765,9 @@ LitroPlayer.prototype = {
 		;
 		channel.noteKey = key;
 		// console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
-		if(this.isSweepNotes(ch) && !this.isFinishEnvelope(ch)){
-			// console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
+		// if(this.isSweepNotes(ch) && !this.isFinishEnvelope(ch)){
+		if(this.isSweepNotes(ch) && !channel.envelopeEnd){
+			console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
 			return;
 		}
 		
@@ -840,6 +847,7 @@ LitroPlayer.prototype = {
 	
 	clearSweepNotes: function(ch)
 	{
+		// console.log('clear', ch);
 		var channel = this.channel[ch];
 		channel.setFrequency(channel.sweepNotesTarget);
 		channel.sweepNotesBase = null;
@@ -860,6 +868,9 @@ LitroPlayer.prototype = {
 		}
 		baseNote = this.searchNearBack(ch, this.noteSeekTime - delay, 0, 'note');
 		targetNote = this.searchNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
+		// baseNote = this.searchNearBack(ch, this.noteSeekTime, 0, 'note');
+		// targetNote = this.searchNearForward(ch, this.noteSeekTime, -1, 'note', baseNote);
+		console.log(ch, this.noteSeekTime, baseNote, targetNote);
 		if(baseNote == null || targetNote == null){
 			this.clearSweepNotes(ch);
 			return;
@@ -1261,7 +1272,7 @@ LitroPlayer.prototype = {
 					this.setSweepNoteOn(ch, true);
 					break;
 				case tuneProp.meeknotes.id:
-					this.setSweepNoteOn(ch, false);
+					// this.setSweepNoteOn(ch, false);
 					break;
 				case tuneProp.noteoff.id: this.fadeOutNote(ch); break;
 				case tuneProp.noteextend.id: this.extendNote(ch); break;
