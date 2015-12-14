@@ -2,7 +2,7 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.03
+ * ver 0.11.04
  */
 var LITROSOUND_VERSION = '0.11.03';
 
@@ -87,6 +87,7 @@ LitroSound.prototype = {
 		this.sampleRate = 0;
 		this.refreshRate = 0; //init
 		this.refreshClock = 0;
+		this.clockRate = 1.00;
 		this.recoverCount = 0; //異常時立ち直りまでのカウント
 		this.processHeavyLoad = false;
 		this.performanceCycle = 280; //?
@@ -295,7 +296,7 @@ LitroSound.prototype = {
 			, players = [], player, pl
 			, data = ev.outputBuffer.getChannelData(0), channel, chdata, avol
 			, dlen = data.length, clen = CHANNELS_NUM, plen = this.players.length
-			, rate = this.refreshRate, rCrock = this.refreshClock
+			, rate = this.refreshRate, rCrock = this.refreshClock, cRate = this.clockRate
 			// , d0 = new Float32Array(ev.outputBuffer.length)
 			;
 			// console.log(channels.length);
@@ -309,7 +310,8 @@ LitroSound.prototype = {
 		
 		data.set(this.buffer0Array);
 		for(i = 0; i < dlen; i++){
-			if(++rCrock >= rate){
+			rCrock += cRate;
+			if(rCrock >= rate){
 				for(pl = 0; pl< plen; pl++){
 					player = players[pl];
 					player.playSound();
@@ -770,6 +772,7 @@ LitroPlayer.prototype = {
 		channel.dataUpdateFlag = true;
 		channel.resetEnvelope();
 		this.onNoteKeyEventFunc(ch, key);
+		
 	},	
 	
 	onNoteFromCode: function(ch, codenum, octave)
@@ -789,7 +792,6 @@ LitroPlayer.prototype = {
 		this.refreshWave(ch);
 		
 		// console.log("onN", channel.absorbPosition, channel.waveClockPosition);
-		
 		// this.setFrequency(ch, freq);
 	},
 	
@@ -1186,9 +1188,11 @@ LitroPlayer.prototype = {
 		if(vol != null){
 			vol = vol < 0 ? 0 : vol;
 			sTime = this.litroSound.context.currentTime;
-			gain.cancelScheduledValues(sTime);
-			gain.setValueAtTime(gain.value, sTime);
-			gain.setTargetAtTime(vol, sTime, 0);
+			// console.log(gain.value, sTime);
+			gain.value = vol;
+			// gain.cancelScheduledValues(sTime);
+			// gain.setValueAtTime(gain.value, sTime);
+			// gain.setTargetAtTime(vol, sTime, 0);
 		}else{
 			vol = gain.value;
 		}
@@ -2369,7 +2373,9 @@ LitroWaveChannel.prototype = {
 	skipEnvelope: function()
 	{
 		// this.preWaveData = this.data[this.preWaveClockPosition];
-		this.resetAbsorbVolume(this.preWaveData, true);
+		//TODO 検証
+		// this.resetAbsorbVolume(this.preWaveData, true);
+		
 		this.envelopeClock = this.envelopeDistance() + 1;
 		// litroSoundInstance.offNoteKeyEventFunc(this.id, this.noteKey);
 	},
