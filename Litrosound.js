@@ -767,7 +767,7 @@ LitroPlayer.prototype = {
 		// console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
 		// if(this.isSweepNotes(ch) && !this.isFinishEnvelope(ch)){
 		if(this.isSweepNotes(ch) && !channel.envelopeEnd){
-			console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
+			// console.log(channel.envelopeClock, this.isFinishEnvelope(ch));
 			return;
 		}
 		
@@ -870,7 +870,7 @@ LitroPlayer.prototype = {
 		targetNote = this.searchNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
 		// baseNote = this.searchNearBack(ch, this.noteSeekTime, 0, 'note');
 		// targetNote = this.searchNearForward(ch, this.noteSeekTime, -1, 'note', baseNote);
-		console.log(ch, this.noteSeekTime, baseNote, targetNote);
+		// console.log(ch, this.noteSeekTime, baseNote, targetNote);
 		if(baseNote == null || targetNote == null){
 			this.clearSweepNotes(ch);
 			return;
