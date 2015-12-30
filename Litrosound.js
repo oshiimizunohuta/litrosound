@@ -4,7 +4,7 @@
  * @author しふたろう
  * ver 0.11.04
  */
-var LITROSOUND_VERSION = '0.11.03';
+var LITROSOUND_VERSION = '0.11.04';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -494,7 +494,7 @@ LitroPlayer.prototype = {
 			channel.init(dataSize, WAVE_VOLUME_RESOLUTION);
 			channel.id = i;
 			// channel.refreshEnvelopeParams(MIN_CLOCK);
-			channel.setFrequency(i, 0);
+			channel.setFrequency(MIN_CLOCK);
 			channel.setMemory(this.memoryHolder.memory(0));
 			this.channel[i] = channel;
 		}
@@ -597,7 +597,6 @@ LitroPlayer.prototype = {
 		this.channel[ch].sweepNotesOn = enable;
 		// console.log('set', ch);
 
-		// this.refreshSweepNotes(ch);
 	},
 	
 	//未使用？
@@ -606,6 +605,7 @@ LitroPlayer.prototype = {
 		this.setChannel(channelNum, 'waveType', type);
 	},
 
+	//TODO 未使用
 	setFrequency: function(ch, freq)
 	{
 		var channel = this.channel[ch]
@@ -636,7 +636,8 @@ LitroPlayer.prototype = {
 		vib = channel.vibratos(MIN_CLOCK);
 		if(key == 'sweep'){
 			if(channel.waveLength > 0){
-				this.setFrequency(ch, Math.round(this.litroSound.sampleRate / channel.waveLength) | 0);
+				// this.setFrequency(ch, Math.round(this.litroSound.sampleRate / channel.waveLength) | 0);
+				channel.setFrequency(Math.round(this.litroSound.sampleRate / channel.waveLength) | 0);
 			}
 			channel.sweepClock = 1;
 			channel.sweepRateMin = maxWavlen() / Math.exp(value *  prop.sweep.min * 0.001);
@@ -699,7 +700,6 @@ LitroPlayer.prototype = {
 		if(channel.envelopeStart && channel.envelopeClock == 0 && !channel.envelopeEnd && enable){
 			abst = channel.data[channel.waveClockPosition];
 			channel.startEnvelope();
-			// this.refreshSweepNotes(ch);
 			startTrig = true;
 		}
 		//立ち下がり
@@ -802,6 +802,7 @@ LitroPlayer.prototype = {
 		// this.setFrequency(ch, freq);
 	},
 	
+	//TODO 未使用？
 	offNoteFromCode: function(channel)
 	{
 		// var freq = this.freqByOctaveCode(octave, code);
@@ -814,7 +815,6 @@ LitroPlayer.prototype = {
 			return;
 		}
 		this.channel[channel].resetEnvelope();
-		// this.setFrequency(channel, 0);
 
 	},
 	
@@ -847,13 +847,15 @@ LitroPlayer.prototype = {
 	
 	clearSweepNotes: function(ch)
 	{
-		// console.log('clear', ch);
 		var channel = this.channel[ch];
-		channel.setFrequency(channel.sweepNotesTarget);
-		channel.sweepNotesBase = null;
-		channel.sweepNotesTarget = null;
-		channel.sweepNotesRate = 0;
-		channel.sweepNotesClock = 0;
+		if(channel.sweepNotesTarget != null){
+		// console.log('clear', ch, channel.sweepNotesTarget);
+			channel.setFrequency(channel.sweepNotesTarget);
+			channel.sweepNotesBase = null;
+			channel.sweepNotesTarget = null;
+			channel.sweepNotesRate = 0;
+			channel.sweepNotesClock = 0;
+		}
 	},
 	
 	refreshSweepNotes: function(ch)
@@ -863,13 +865,12 @@ LitroPlayer.prototype = {
 		, sample = this.litroSound.sampleRate
 		, delay = this.getDelay(ch)
 		;
+		
 		if(!this.isSweepNotes(ch)){
 			return;
 		}
 		baseNote = this.searchNearBack(ch, this.noteSeekTime - delay, 0, 'note');
 		targetNote = this.searchNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
-		// baseNote = this.searchNearBack(ch, this.noteSeekTime, 0, 'note');
-		// targetNote = this.searchNearForward(ch, this.noteSeekTime, -1, 'note', baseNote);
 		// console.log(ch, this.noteSeekTime, baseNote, targetNote);
 		if(baseNote == null || targetNote == null){
 			this.clearSweepNotes(ch);
@@ -2145,7 +2146,7 @@ LitroWaveChannel.prototype = {
 		
 		this.sweepNotesOn = false;
 		this.sweepNotesBase = -1;//freq
-		this.sweepNotesTarget = -1;
+		this.sweepNotesTarget = -1;//イニシャルは-1
 		this.sweepNotesRate = 0;
 		this.sweepNotesClock = 0;
 		
@@ -2319,7 +2320,12 @@ LitroWaveChannel.prototype = {
 		var memPos = this.waveClockPosition
 		, preMemPos = this.preWaveClockPosition
 		;
-		this.frequency = freq;// + (freq / 1028 * this.getChannel(ch, 'detune', true));
+		if(freq == null || freq == 0){
+			console.error('Illegal Freq value', freq);
+			return;
+		}
+		// + (freq / 1028 * this.getChannel(ch, 'detune', true));
+		this.frequency = freq;
 		this.prevLength = this.staticWaveLength | 0;
 		// this.setWaveLength(litroSoundInstance.context.sampleRate / this.frequency);
 		this.setWaveLength(litroSoundInstance.context.sampleRate / this.frequency);
