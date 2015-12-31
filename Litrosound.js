@@ -167,21 +167,6 @@ LitroSound.prototype = {
 		return deleted;
 	},
 	
-	//TODO 移行準備OK
-	freqByOctaveCodeNum: function(octave, codenum){
-		return KEY_FREQUENCY[octave][codenum];
-	},
-	
-	//TODO 移行準備OK
-	keyByOctaveCodeNum: function(octave, codenum){
-		return (KEY_FREQUENCY[octave].length * octave) + codenum;
-	},
-	
-	//TODO 移行準備OK
-	freqByKey: function(key){
-		return KEY_FREQUENCY[(key / KEY_FREQUENCY[0].length) | 0][key % KEY_FREQUENCY[0].length];
-	},
-	
 	/**
 	 * 視覚用波形出力
 	 * @param {Object} size
@@ -543,7 +528,6 @@ LitroPlayer.prototype = {
 		return this.channel[ch].tuneParams;
 	},
 	
-	//TODO refEnable廃止
 	getEnvelopes: function(ch)
 	{
 		var channel = this.channel[ch];
@@ -604,14 +588,6 @@ LitroPlayer.prototype = {
 	{
 		this.setChannel(channelNum, 'waveType', type);
 	},
-
-	//TODO 未使用
-	setFrequency: function(ch, freq)
-	{
-		var channel = this.channel[ch]
-		;
-		channel.setFrequency(freq);
-	},
 	
 	setChannel: function(ch, key, value)
 	{
@@ -671,16 +647,6 @@ LitroPlayer.prototype = {
 		}
 	},
 	
-	//TODO seを使う方向で廃止予定
-	setPreSwapTune: function(toch, tuneParams)
-	{
-		var channel = this.channel[toch], key;
-		this.channel[toch].preSwapTune = {};
-		for(channel.tuneParams in key){
-			channel.preSwapTune[key] = tuneParams[key] != null ? tuneParams[key] : channel.tuneParams[key];
-		}
-	},
-	
 	// execper1/60fps
 	refreshWave: function (channelNum)
 	{
@@ -712,13 +678,6 @@ LitroPlayer.prototype = {
 			endTrig = true;
 		}
 		
-		//TODO sumFreqいらないかも
-		sumFreq = channel.frequency;
-		if(sumFreq < minFreq()){
-			sumFreq = minFreq();
-		}else if(sumFreq > maxFreq()){
-			sumFreq = maxFreq();
-		}
 		channel.prevLength = channel.waveLength;
 
 		wavLen = channel.staticWaveLength;
@@ -800,22 +759,6 @@ LitroPlayer.prototype = {
 		
 		// console.log("onN", channel.absorbPosition, channel.waveClockPosition);
 		// this.setFrequency(ch, freq);
-	},
-	
-	//TODO 未使用？
-	offNoteFromCode: function(channel)
-	{
-		// var freq = this.freqByOctaveCode(octave, code);
-		
-		if(channel == null){
-			var i;
-			for(i = 0; i < this.channel.length; i++){
-				this.setFrequency(i, 0);
-			}
-			return;
-		}
-		this.channel[channel].resetEnvelope();
-
 	},
 	
 	extendNote: function(channelNum)
