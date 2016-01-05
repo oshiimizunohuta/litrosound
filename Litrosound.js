@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.04
+ * ver 0.11.05
  */
-var LITROSOUND_VERSION = '0.11.04';
+var LITROSOUND_VERSION = '0.11.05';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -19,7 +19,7 @@ var BUFFER_FRAMES = 60;
 // var BUFFERS = 2;
 var FRAME_RATE = 60;
 var MILLI_SECOND = 1000;
-var MIN_CLOCK = MILLI_SECOND / FRAME_RATE;
+var MIN_CLOCK = MILLI_SECOND / FRAME_RATE; //EnvelopeMinimumClock
 var WAVE_VOLUME_RESOLUTION = 15;
 var CHANNELS_NUM = 8;
 var litroAudio = null;
@@ -1456,6 +1456,11 @@ LitroPlayer.prototype = {
 	
 };
 
+function makeLitroElement(type, time, value)
+{
+	return {type: type != null ? type : 'null', time: time != null ? time : 0, value: value != null ? value : 0};
+};
+
 function makeEventsetData(channels){
 	var eventset = [], type, ch, addEtc = 0
 	;
@@ -1732,6 +1737,7 @@ LitroSoundParser.prototype = {
 		}
 		return str;
 	},
+	
 	//datastr parse のみ有効
 	timevalData: function(type, timeval)
 	{
@@ -1745,7 +1751,7 @@ LitroSoundParser.prototype = {
 		for(i = 0; i < length; i++){
 			time = parseInt(timeval.substr(chunkLen * i, datLen.time), mode);
 			value = parseInt(timeval.substr((chunkLen * i) + datLen.time, datLen.value), mode) + prop[type].min;
-			res[time] = {type: type, time: time, value: value};
+			res[time] = makeLitroElement(type, time, value);
 		}
 		return res;
 	},
