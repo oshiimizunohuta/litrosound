@@ -320,10 +320,7 @@ LitroSound.prototype = {
 					}
 					avol += channel.absorbVolume();
 				}
-				// data[i] += chdata + avol;
 				data[i] += chdata + avol;
-				// data[i] = 0.311 * (i % 2);
-				// if(i == 0){console.log(data[i]);}
 			}
 		}
 		this.refreshClock = rCrock;
@@ -2071,6 +2068,7 @@ LitroWaveChannel.prototype = {
 		this.absorbVolumeSource = 0;
 		this.absorbVolumeStart = 0;
 		this.absorbVolumeEnd = 0;
+		this.absorbVolumeDistance = 0;
 		this.absorbPosition = 0;
 		this.absorbCount = 0;
 		this.absorbNegCount = 0;
@@ -2392,16 +2390,14 @@ LitroWaveChannel.prototype = {
 	
 	restartAbsorbVolume: function(start, end)
 	{
-		//クリック音防止余韻
 		this.absorbVolumeStart = start;
 		this.absorbVolumeEnd = end;
+		this.absorbVolumeDistance = end - start;
 		this.absorbCount = 0;
 	},
 	
 	absorbVolume: function(){
-		//クリック音防止余韻
-		return -(this.absorbVolumeEnd - this.absorbVolumeStart) * Math.exp(-this.ABSORB_COEFFCIENT * this.absorbCount++);
-		// return 0;
+		return -this.absorbVolumeDistance * Math.exp(-this.ABSORB_COEFFCIENT * this.absorbCount++);
 	},
 	
 	skipWave: function(){
@@ -2442,13 +2438,14 @@ LitroWaveChannel.prototype = {
 			, data = this.data, len = this.waveLength, plen = this.prevLength
 			, delta = 0
 			, pos = 0
+			, offvol = LitroWaveChannel.offsetVolume
 			;
 		if(mem == null){return;}
 		delta = mem.length / len;
 		vol *= this.getWaveOffsetRate();
 		if(vol < 0){vol = 0;}
 		for(i = 0; i < len; i++){
-			data[i] = (mem[pos | 0] - LitroWaveChannel.offsetVolume) * vol;
+			data[i] = (mem[pos | 0] - offvol) * vol;
 			pos += delta;
 		}
 		for(i; i < plen; i++){
