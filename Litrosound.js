@@ -318,7 +318,9 @@ LitroSound.prototype = {
 					}else{
 						channel.skipWave();
 					}
-					avol += channel.absorbVolume();
+					if(channel.isAbsorbable()){
+						avol += channel.absorbVolume();
+					}
 				}
 				data[i] += chdata + avol;
 			}
@@ -2099,6 +2101,8 @@ LitroWaveChannel.prototype = {
 		
 		this.prevLength = 0;
 		this.data = this.allocBuffer(datasize);
+		this.blankBuffer = this.allocBuffer(datasize);
+
 		this.bufferSize = datasize;
 		this.dataUpdateFlag = false;//不要？
 		// this.refChannel = -1;
@@ -2115,7 +2119,10 @@ LitroWaveChannel.prototype = {
 		this.frequency = 1;
 		this.WAVE_VOLUME_RESOLUTION = resolution;
 		this.memory; //波形メモリ
+		this.memoryData = [];
 		this.ABSORB_COEFFCIENT = 0.001;
+		this.ABSORB_COUNT_MAX = (10 / this.ABSORB_COEFFCIENT) | 1;
+		this.waveMemoryClockRate = 1;
 
 		this.tuneParams = {
 			volumeLevel:12,
@@ -2287,8 +2294,10 @@ LitroWaveChannel.prototype = {
 //TODO staticWaveLengthも更新するべき？(する場合refreshWaveも調整必要あり)	
 	setWaveLength: function(length)
 	{
+		var mem  = this.getMemory();
 		this.waveLengthFloat = length;
 		this.waveLength = Math.round(length) | 0;
+		this.waveMemoryClockRate = mem == null ? 0 : (mem.length / this.waveLength);
 	},
 	
 	allocBuffer: function(datasize){
@@ -2400,6 +2409,10 @@ LitroWaveChannel.prototype = {
 		return -this.absorbVolumeDistance * Math.exp(-this.ABSORB_COEFFCIENT * this.absorbCount++);
 	},
 	
+	isAbsorbable: function(){
+		return this.absorbCount < this.ABSORB_COUNT_MAX;
+	},
+	
 	skipWave: function(){
 		if(this.envelopeEnd == true || this.waveLength == 0){return 0;}
 		var wpos = this.waveClockPosition, wlen = this.waveLength
@@ -2436,25 +2449,27 @@ LitroWaveChannel.prototype = {
 			, mem = this.getMemory()
 			, vol = this.envelopedVolume()
 			, data = this.data, len = this.waveLength, plen = this.prevLength
-			, delta = 0
+			, delta = this.waveMemoryClockRate
 			, pos = 0
 			, offvol = LitroWaveChannel.offsetVolume
 			;
-		if(mem == null){return;}
-		delta = mem.length / len;
 		vol *= this.getWaveOffsetRate();
 		if(vol < 0){vol = 0;}
 		for(i = 0; i < len; i++){
 			data[i] = (mem[pos | 0] - offvol) * vol;
 			pos += delta;
 		}
-		for(i; i < plen; i++){
-			data[i] = 0;
+		
+		if(i < plen){
+			data.set(this.blankBuffer.subarray(i, plen - 1), i);
 		}
+		
+		// for(i; i < plen; i++){
+			// data[i] = 0;
+		// }
 	},
 
 };
-
 function LitroWaveMemory(){return;};
 LitroWaveMemory.SAMPLE_BUFFER = 32;
 LitroWaveMemory.QUANTIZATION_SIZE = 8;// & 00001111
