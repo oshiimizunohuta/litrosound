@@ -2121,8 +2121,9 @@ LitroWaveChannel.prototype = {
 		this.memory; //波形メモリ
 		this.memoryData = [];
 		this.ABSORB_COEFFCIENT = 0.001;
-		this.ABSORB_COUNT_MAX = (10 / this.ABSORB_COEFFCIENT) | 1;
+		this.ABSORB_COUNT_MAX = (64 / this.ABSORB_COEFFCIENT) | 0;
 		this.waveMemoryClockRate = 1;
+		console.log(this.ABSORB_COUNT_MAX);
 
 		this.tuneParams = {
 			volumeLevel:12,
@@ -2387,6 +2388,7 @@ LitroWaveChannel.prototype = {
 		return false;
 	},
 	
+	//TODO いらないんじゃ
 	resetAbsorbVolume: function(volume, positive)
 	{
 		if(positive){
