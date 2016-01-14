@@ -2,7 +2,7 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.05
+ * ver 0.11.06
  */
 var LITROSOUND_VERSION = '0.11.05';
 
@@ -2123,7 +2123,6 @@ LitroWaveChannel.prototype = {
 		this.ABSORB_COEFFCIENT = 0.001;
 		this.ABSORB_COUNT_MAX = (64 / this.ABSORB_COEFFCIENT) | 0;
 		this.waveMemoryClockRate = 1;
-		console.log(this.ABSORB_COUNT_MAX);
 
 		this.tuneParams = {
 			volumeLevel:12,
