@@ -237,6 +237,7 @@ LitroSound.prototype = {
 		this.maxFreq = (this.sampleRate / 2) | 0;
 		this.maxWavlen = (this.sampleRate / minFreq()) | 0;
 		this.minWavlen = (this.sampleRate / maxFreq()) | 0;
+		// console.log(this.refreshRate , this.sampleRate);
 	},
 	
 	connectOn: function()
@@ -608,7 +609,8 @@ LitroPlayer.prototype = {
 			channel.skipEnvelope();
 		}
 		
-		vib = channel.vibratos(MIN_CLOCK);
+		// vib = channel.vibratos(MIN_CLOCK);
+		vib = channel.vibratos(1);
 		if(key == 'sweep'){
 			if(channel.waveLength > 0){
 				// this.setFrequency(ch, Math.round(this.litroSound.sampleRate / channel.waveLength) | 0);
@@ -618,11 +620,16 @@ LitroPlayer.prototype = {
 			channel.sweepRateMin = maxWavlen() / Math.exp(value *  prop.sweep.min * 0.001);
 			channel.sweepRateMax = maxWavlen() / Math.exp(value *  prop.sweep.max * 0.001);
 		}else if(key == 'vibratophase'){
-			channel.vibratophaseRate = vib.vibratophase * 180 / vibDist;
+			//vibrato offset phase
+			// channel.vibratophaseRate = vib.vibratophase * 180 / vibDist;
+			channel.vibratophaseRate = 2 * Math.PI * (vib.vibratophase / (vibDist));
+			// console.log(channel.vibratophaseRate);
 		}else if(key == 'vibratodepth'){
-			channel.vibratodepthRate  = vib.vibratodepth / vibDist;
+			channel.vibratodepthRate = vib.vibratodepth / vibDist;
 		}else if(key == 'vibratospeed'){
-			channel.vibratospeedRate = (Math.PI / 180) * 180 / vib.vibratospeed;
+			//vibrato rate
+			// channel.vibratospeedRate = (Math.PI / 180) * 180 / vib.vibratospeed;
+			channel.vibratospeedRate = Math.PI  / (vib.vibratospeed + 0);
 		}else if(key == 'waveType'){
 			channel.setMemory(this.memoryHolder.memory(value));
 		}
@@ -688,7 +695,9 @@ LitroPlayer.prototype = {
 		swnotesRate = channel.sweepNotesRate * channel.sweepNotesClock;
 
 		vibLen = vibriseClock < 0 || vib.vibratospeed == 0 ? 0 : (wavLen * channel.vibratodepthRate)
-		 			* Math.sin((vibriseClock + phase) * channel.vibratospeedRate);
+		 			* Math.sin(((vibriseClock * channel.vibratospeedRate) + phase));
+		 			// * Math.sin((vibriseClock + phase) * channel.vibratospeedRate);
+		 			// if(vib.vibratospeed > 0)console.log(vibriseClock + phase);
 		// sumLen = sweepLen + vibLen;
 		// channel.waveLength = (wavLen + sweepLen + vibLen + channel.sweepNotesRate) | 0;
 		channel.setWaveLength(wavLen + sweepLen + vibLen + swnotesRate);
