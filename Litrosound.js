@@ -2,7 +2,7 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.06
+ * ver 0.11.07
  */
 var LITROSOUND_VERSION = '0.11.05';
 
