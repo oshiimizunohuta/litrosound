@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.07
+ * ver 0.11.08
  */
-var LITROSOUND_VERSION = '0.11.07';
+var LITROSOUND_VERSION = '0.11.08';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -579,8 +579,6 @@ LitroPlayer.prototype = {
 	setSweepNoteOn: function(ch, enable)
 	{
 		this.channel[ch].sweepNotesOn = enable;
-		// console.log('set', ch);
-
 	},
 	
 	//未使用？
@@ -679,8 +677,8 @@ LitroPlayer.prototype = {
 			abst = channel.data[channel.waveClockPosition];
 			channel.endEnvelope();
 			this.offNoteKeyEventFunc(channelNum.id, channel.noteKey);
-			this.clearSweepNotes(ch);
-			this.setSweepNoteOn(ch, false);
+			this.clearSweepNotes(channelNum);
+			this.setSweepNoteOn(channelNum, false);
 			endTrig = true;
 		}
 		
@@ -827,6 +825,7 @@ LitroPlayer.prototype = {
 			this.clearSweepNotes(ch);
 			return;
 		}
+
 		channel.sweepNotesBase = freqByKey(baseNote.value);
 		channel.sweepNotesTarget = freqByKey(targetNote.value);
 		channel.sweepNotesRate = ((sample / channel.sweepNotesTarget) - (sample / channel.sweepNotesBase)) / (targetNote.time - baseNote.time);
@@ -1251,6 +1250,7 @@ LitroPlayer.prototype = {
 				this.soundEventDelayPush(ch, delay, delay + data.time, type, data.value);
 			}else{
 				looped |= this.soundEventPush(ch, type, data.value);
+				delay = this.getDelay(ch);
 			}
 			
 		}
