@@ -4,7 +4,7 @@
  * @author しふたろう
  * ver 0.11.07
  */
-var LITROSOUND_VERSION = '0.11.05';
+var LITROSOUND_VERSION = '0.11.07';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -629,7 +629,7 @@ LitroPlayer.prototype = {
 		}else if(key == 'vibratospeed'){
 			//vibrato rate
 			// channel.vibratospeedRate = (Math.PI / 180) * 180 / vib.vibratospeed;
-			channel.vibratospeedRate = Math.PI  / (vib.vibratospeed + 0);
+			channel.vibratospeedRate = vib.vibratospeed == 0 ? 0 : Math.PI  / (vib.vibratospeed + 0);
 		}else if(key == 'waveType'){
 			channel.setMemory(this.memoryHolder.memory(value));
 		}
