@@ -1051,11 +1051,11 @@ LitroPlayer.prototype = {
 	setPlayDataFromPackForTitle: function(title)
 	{
 		var key, titles = this.playPack.packTitles;
-		key = search(title);
-		if(key == -1){
+		index = titles.indexOf(title);
+		if(index == -1){
 			return false;
 		}
-		return this.setPlayData(titles[key]);
+		return this.setPlayDataFromPackIndex(index);
 	},
 	
 	fileList: function(list)
@@ -1075,7 +1075,7 @@ LitroPlayer.prototype = {
 		// console.log(pack);
 		if(!isNaN(index_title)){
 			res = this.setPlayDataFromPackIndex(index_title);
-		}else if(typeof index_title == 'String'){
+		}else if(typeof index_title == 'string'){
 			res = this.setPlayDataFromPackForTitle(index_title);
 		}
 		if(res == false){
@@ -1093,6 +1093,7 @@ LitroPlayer.prototype = {
 		;
 		for(i = 0; i < elements.length; i++){
 			elements[i].addEventListener(type, function(){
+				self.finishChannelEnvelope();
 				self.playForKey(key);
 			}, false);
 		}
@@ -1138,7 +1139,8 @@ LitroPlayer.prototype = {
 	finishChannelEnvelope: function(){
 		var i, channel = this.channel;
 		for(i = 0; i < channel.length; i++){
-			channel[i].skipEnvelope();
+			channel[i].endEnvelope();
+			// channel[i].skipEnvelope();
 			this.setSweepNoteOn(i, false);
 			this.clearSweepNotes(i);
 		}
