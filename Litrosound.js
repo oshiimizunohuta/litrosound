@@ -286,10 +286,10 @@ LitroSound.prototype = {
 			// , d0 = new Float32Array(ev.outputBuffer.length)
 			;
 			// console.log(channels.length);
-		if(!this.checkPerformance(ev)){
-			this.clearBuffer(ev);
-			return;
-		}
+		// if(!this.checkPerformance(ev)){
+			// this.clearBuffer(ev);
+			// return;
+		// }
 		for(pl = 0; pl < plen; pl++){
 			players.push(this.players[pl].player);
 		}
@@ -2545,10 +2545,13 @@ LitroWaveMemoryHolder.prototype = {
 			, p = LitroWaveChannel.noiseParam
 			, clock = p.clock, reg = p.reg, pvol = p.volume
 			, len = data.length, wlen = channel.waveLength
+//			/ 2
 			;
+//			noteKey
+//			debugger
 			//p.shortType = type; //短周期タイプ
 			for(i = 0; i < len; i++){
-				if(clock++ >= wlen){
+				if(++clock >= wlen){
 					reg >>= 1;
 					reg |= ((reg ^ (reg >> type)) & 1) << 15;
 					pvol = (reg & 1) * WAVE_VOLUME_RESOLUTION;
@@ -2585,7 +2588,38 @@ LitroWaveMemoryHolder.prototype = {
 	},
 };
 
-function LTSND(user, pack, func){
+function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
+	var soundEngin
+		, sePlayer, bgmPlayer
+		, ltsnd = {engin: soundEngin, se: sePlayer, bgm: bgmPlayer}
+	;
+	window.addEventListener('load', function(){
+		ltsnd.engin = new LitroSound();
+		ltsnd.engin.init();
+		ltsnd.engin.setTouchOuth('body');
+		ltsnd.se = new LitroPlayer();
+		ltsnd.bgm = new LitroPlayer();
+		
+		ltsnd.bgm.init('bgm');
+		ltsnd.se.init('se');
+		ltsnd.bgm.loadPack(user, "name:" + bgmpack, function(){
+			if(sepack != null){
+				ltsnd.se.loadPack(user, "name:" + sepack, function(){
+					func(ltsnd);
+				});
+			}else{
+				func(ltsnd);
+			}
+		}, function(){
+			errorFunc(ltsnd);
+		});
+	}, false);
+	
+	return ltsnd;
+	
+}
+
+function LTSND(user, pack, func, errorFunc){
 	var soundEngin
 		, sePlayer, bgmPlayer
 		, ltsnd = {engin: soundEngin, se: sePlayer, bgm: bgmPlayer}
@@ -2599,7 +2633,11 @@ function LTSND(user, pack, func){
 		
 		ltsnd.se.init('se');
 		// bgmPlayer.init('bgm');
-		ltsnd.se.loadPack(user, "name:" + pack, func(ltsnd));
+		ltsnd.se.loadPack(user, "name:" + pack, function(){
+			func(ltsnd);
+		}, function(){
+			errorFunc(ltsnd);
+		});
 	}, false);
 	
 	return ltsnd;
