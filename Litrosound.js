@@ -1937,6 +1937,8 @@ function sendToAPIServer(method, api, params, func, errorFunc)
 	}
 	x.withCredentials = true;
 	x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+	x.ontimeout = errorFunc != null ? errorFunc : function(){return false;};
+	x.timeout = 5000;
 	// Set-Cookie:LITROSOUND=8lr6fpmr30focapfnejn807mo5;
 	x.send(str);
 };
