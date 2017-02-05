@@ -1893,38 +1893,75 @@ function initAPIServer(apiUrl)
 {
 	APIServer.url = apiUrl;
 };
-
 function sendToAPIServer(method, api, params, func, errorFunc)
 {
 	var query = [], key, x = new XMLHttpRequest();
 	if(APIServer.url == null){console.error('not initialize api server'); return;}
-	if(func != null){
-		x.onreadystatechange = function(){
-			var j;
-			switch(x.readyState){
-				case 0:break;//オブジェクト生成
-				case 1:break;//オープン
-				case 2:break;//ヘッダ受信
-				case 3:break;//ボディ受信
-				case 4:
-							if((200 <= x.status && x.status < 300) || (x.status == 304)){
-								j = x.responseText;
-								try{
-									j = typeof j == 'string' ? JSON.parse(j) : '';
-								}catch(e){
-									j = null;
-								}
-								func(j);
-								x.abort();
-							}else{
-								errorFunc();
-								x.abort();
-							}
-							 break;//send()完了
+//	if(func != null){
+//		x.onreadystatechange = function(){
+//			var j;
+//			switch(x.readyState){
+//				case 0:break;//オブジェクト生成
+//				case 1:break;//オープン
+//				case 2:break;//ヘッダ受信
+//				case 3:break;//ボディ受信
+//				case 4:
+//							if((200 <= x.status && x.status < 300) || (x.status == 304)){
+//								j = x.responseText;
+//								try{
+//									j = typeof j == 'string' ? JSON.parse(j) : '';
+//								}catch(e){
+//									j = null;
+//								}
+//								func(j);
+//								x.abort();
+//							}else{
+////								x.ontimeout();
+//								x.abort();
+//							}
+//							 break;//send()完了
+//			}
+//		//	func;
+//		};
+//	}
+
+	x.timeout = 5000;
+	
+	x.onload = func != null ? function () {
+		var j;
+		if (x.readyState === 4) {
+			if (x.status === 200) {
+				try{
+					j = x.responseText;
+					j = typeof j == 'string' ? JSON.parse(j) : '';
+				}catch(e){
+					j = null;
+				}
+				func(j);
+			} else {
+				console.error(x.statusText);
 			}
-		//	func;
+		}
+	} : function () {
+		return false;
+	};
+	
+	if(errorFunc != null){
+		x.ontimeout = function(e){
+			errorFunc(e);
+			return false;
+		};
+		x.onerror = function(e){
+			errorFunc(e);
+			return false;
+		};
+		x.onabort = function(e){
+			errorFunc(e);
+			return false;
 		};
 	}
+	
+	
 	for(key in params){
 		query.push(key + '=' + params[key]);
 	}
@@ -1937,12 +1974,10 @@ function sendToAPIServer(method, api, params, func, errorFunc)
 	}
 	x.withCredentials = true;
 	x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
-	x.ontimeout = errorFunc != null ? errorFunc : function(){return false;};
-	x.timeout = 5000;
+
 	// Set-Cookie:LITROSOUND=8lr6fpmr30focapfnejn807mo5;
 	x.send(str);
 };
-
 /**
  * 波形生成
  */
