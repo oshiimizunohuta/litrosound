@@ -1127,6 +1127,9 @@ LitroPlayer.prototype = {
 	{
 		this.resetFadeChannel();
 		this.onFadeEndFunc = func == null ? function(){return;} : func;
+		if(!this.isPlay()){
+			func();
+		};
 		this.fadeStart = this.systemTime;
 		this.fadeEnd = this.fadeStart + time;
 		this.fadeDiff = this.fadeEnd - this.fadeStart;
