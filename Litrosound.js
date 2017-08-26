@@ -2700,8 +2700,8 @@ function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		ltsnd.se = new LitroPlayer();
 		ltsnd.bgm = new LitroPlayer();
 		
-		ltsnd.bgm.init('bgm');
 		ltsnd.se.init('se');
+		ltsnd.bgm.init('bgm');
 		ltsnd.bgm.loadPack(user, "name:" + bgmpack, function(){
 			if(sepack != null){
 				ltsnd.se.loadPack(user, "name:" + sepack, function(){
