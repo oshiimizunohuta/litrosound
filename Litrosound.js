@@ -284,7 +284,7 @@ LitroSound.prototype = {
 		for(pl = 0; pl < plen; pl++){
 			players.push(this.players[pl].player);
 		}
-		
+//		return;
 		data.set(this.buffer0Array);
 		for(i = 0; i < dlen; i++){
 			rCrock += cRate;
@@ -1114,6 +1114,7 @@ LitroPlayer.prototype = {
 	
 	stop: function(toggle)
 	{
+		this.resetFadeChannel();
 		this.systemTime = performance.now();
 		this.playSoundFlag = false;
 		this.delayEventset = makeEventsetData();
