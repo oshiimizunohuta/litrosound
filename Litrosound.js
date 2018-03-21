@@ -2694,7 +2694,7 @@ function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		, sePlayer, bgmPlayer
 		, ltsnd = {engin: soundEngin, se: sePlayer, bgm: bgmPlayer}
 	;
-	window.addEventListener('load', function(){
+//	window.addEventListener('load', function(){
 		ltsnd.engin = new LitroSound();
 		ltsnd.engin.init();
 		ltsnd.engin.setTouchOuth('body');
@@ -2714,7 +2714,7 @@ function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		}, function(){
 			errorFunc(ltsnd);
 		});
-	}, false);
+//	}, false);
 	
 	return ltsnd;
 	
