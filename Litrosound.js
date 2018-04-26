@@ -2,9 +2,9 @@
  * Litro Sound Library
  * Since 2013-11-19 07:43:37
  * @author しふたろう
- * ver 0.11.10
+ * ver 0.11.11
  */
-var LITROSOUND_VERSION = '0.11.10';
+var LITROSOUND_VERSION = '0.11.11';
 
 // var SAMPLE_RATE = 24000;
 // var SAMPLE_RATE = 48000;
@@ -1096,7 +1096,7 @@ LitroPlayer.prototype = {
 	play: function()
 	{
 //		this.onFadeOutFinish();
-		
+		this.litroSound.context.resume();
 		this.systemTime = performance.now();
 		this.playSoundFlag = true;
 		this.delayEventset = makeEventsetData();
