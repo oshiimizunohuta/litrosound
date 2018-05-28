@@ -589,12 +589,12 @@ function LITROSOUND(user, bgmpack, sepack, func, errorFunc){
 function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 	var soundEngin
 		, sePlayer, bgmPlayer
-		, ltsnd = {engin: soundEngin, se: sePlayer, bgm: bgmPlayer}
+		, ltsnd = {engine: soundEngin, se: sePlayer, bgm: bgmPlayer}
 	;
 //	window.addEventListener('load', function(){
-		ltsnd.engin = new LitroSound();
-		ltsnd.engin.init();
-		ltsnd.engin.setTouchOuth('body');
+		ltsnd.engine = new LitroSound();
+		ltsnd.engine.init();
+		ltsnd.engine.setTouchOuth('body');
 		ltsnd.se = new LitroPlayer();
 		ltsnd.bgm = new LitroPlayer();
 		
