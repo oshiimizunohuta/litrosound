@@ -418,10 +418,11 @@ export class LitroHandle{
 		// this.context = new AudioContext();
 		this.createContext();
 
+		this.callback = {} //init完了後コールバック
 		if(this.context.audioWorklet == null){
+			this.callback = false;
 			return false;
 		}
-		this.callback = {} //init完了後コールバック
 
 		this.worklet = this.context.audioWorklet.addModule(LitroHandle.processorPath).then(function(){
 			let node = new AudioWorkletNode(self.context, 'main-processor')

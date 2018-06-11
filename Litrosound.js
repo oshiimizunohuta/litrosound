@@ -1174,6 +1174,10 @@ LitroPlayer.prototype = {
 		return vol;
 	},
 	
+	cvolume: function(cvol){
+		this.volume(cvol *defines.VOLUME_CELLSIZE);
+	},
+	
 	commonEventTime: function(eventName){
 		let t, tuneID = LitroWaveChannel.tuneParamsProp[eventName].id
 			, set = this.eventsetData[this.COMMON_TUNE_CH].event;
