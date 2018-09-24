@@ -10,8 +10,8 @@ var litroSoundInstance;
 //let LitroSound = {};
 class LitroSound{
 	constructor(){
-		LitroSound.version = defines.LITROSOUND_VERSION;
-		
+		LitroSound.version = defines.LITROSOUND_SINGLE_VERSION;
+		defines.processorMode('single');
 	}
 	init(channelNum) {
 		let  self = this
@@ -307,18 +307,18 @@ class LitroSound{
 /**
  * デバッグ用
  */
-function litroVersion()
-{
-	let str = ''
-		;
-		// ls.init(1);
-		// lp.init('v');
-
-	str = "LitroSound:" + LitroSound.version + "\n"
-	 + "LitroPlayer:" + LitroPlayer.version + "\n"
-	 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
-	console.info(str);
-}
+//function litroVersion()
+//{
+//	let str = ''
+//		;
+//		// ls.init(1);
+//		// lp.init('v');
+//
+//	str = "LitroSound:" + LitroSound.version + '(' + LitroSound.processorMode + ')' + "\n"
+//	 + "LitroPlayer:" + LitroPlayer.version + "\n"
+//	 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
+//	console.info(str);
+//}
 
 let litroPlayerInstance = null;
 /**
@@ -2653,6 +2653,7 @@ function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		ltsnd.bgm.loadPack(user, "name:" + bgmpack, function(){
 			if(sepack != null){
 				ltsnd.se.loadPack(user, "name:" + sepack, function(){
+					defines.litroVersion();
 					func(ltsnd);
 				});
 			}else{

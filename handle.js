@@ -385,6 +385,7 @@ export class LitroHandle{
 		this.isFirefox = (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) ? true : false;
 		this.channel = [];
 		this.channel.length = channelNum;
+		defines.processorMode('worklet');
 		// this.channel_s = [];
 		// this.channel_s.length = channelNum;
 		
@@ -642,18 +643,21 @@ LitroHandle.processorPath = './litrosound/processor.js';
 /**
  * デバッグ用
  */
-function litroVersion()
-{
-	let str = ''
-		;
-		// ls.init(1);
-		// lp.init('v');
-
-	str = "LitroSound:" + LitroHandle.version + "\n"
-	 + "LitroPlayer:" + LitroPlayerHandle.version + "\n"
-	 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
-	console.info(str);
-}
+//function litroVersion()
+//{
+//	let str = ''
+//		;
+//		// ls.init(1);
+//		// lp.init('v');
+//
+////	str = "LitroSound:" + LitroHandle.version + "\n"
+////	 + "LitroPlayer:" + LitroPlayerHandle.version + "\n"
+////	 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
+//	str = "LitroSound:" + LitroHandle.version + '(' + LitroHandle.processorMode + ')' + "\n"
+//	 + "LitroPlayer:" + LitroPlayerHandle.version + "\n"
+//	 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
+//	console.info(str);
+//}
 
 
 function makeLitroElement(type, time, value)
@@ -720,6 +724,7 @@ export function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		ltsnd.bgm.loadPack(user, "name:" + bgmpack, function(){
 			if(sepack != null){
 				ltsnd.se.loadPack(user, "name:" + sepack, function(){
+					defines.litroVersion();
 					func(ltsnd);
 				});
 			}else{

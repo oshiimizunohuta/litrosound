@@ -2,9 +2,14 @@
  * 初期設定
  */
 
+export var
+LITROSOUND_PROCESSORMODE = ''
+;
+
 //export default function defines(){
 export const
 LITROSOUND_VERSION = '0.12.00'
+, LITROSOUND_SINGLE_VERSION = '0.11.11'
 , LITROPLAYER_VERSION = '03.01'
 
 , SAMPLE_RATE = 44100//readonly
@@ -89,6 +94,36 @@ LITROSOUND_VERSION = '0.12.00'
 {
 	return {type: type != null ? type : 'null', time: time != null ? time : 0, value: value != null ? value : 0};
 }
+
+/**
+ * デバッグ用
+ */
+, litroVersion = function()
+{
+	let str = ''
+		;
+		// ls.init(1);
+		// lp.init('v');
+	if(LITROSOUND_PROCESSORMODE == 'worklet'){
+		str = "LitroSound:" + LITROSOUND_VERSION + '(' + LITROSOUND_PROCESSORMODE + ')' + "\n"
+		 + "LitroPlayer:" + LITROPLAYER_VERSION + "\n"
+		 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
+	}else{
+		str = "LitroSound:" + LITROSOUND_SINGLE_VERSION + '(' + LITROSOUND_PROCESSORMODE + ')' + "\n"
+		 + "LitroPlayer:" + LITROPLAYER_VERSION + "\n"
+		 + "LitroAudioParams:" + LitroWaveChannel.paramsVersion;
+	}
+
+	console.info(str);
+}
+
+, processorMode = function(set){
+	if(set != null){
+		LITROSOUND_PROCESSORMODE = set;
+	}
+	return LITROSOUND_PROCESSORMODE;
+}
+
 ;
 
 
