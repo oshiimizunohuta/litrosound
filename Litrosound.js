@@ -1338,7 +1338,7 @@ LitroPlayer.prototype = {
 		for(i = 0; i < slen; i++){
 			type = sort[i];
 			if(type != 'note' && type != 'event' && ch != 3){
-				continue
+//				continue
 			}
 			currentEvent = this.getCurrentEvent(ch, type)
 			if(currentEvent == null || currentEvent.time > seekTime){continue;}
