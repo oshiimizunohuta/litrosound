@@ -131,13 +131,13 @@ class LitroSound{
 		let i, channel, scriptProcess, src, self = this, vol
 			, context = this.context;
 		//ゲイン
-		if(this.gain != null){
-			vol = this.gain.gain.value;
-		}
-		this.gain = null;
-		this.gain = context.createGain();
-		this.gain.gain.value = vol == null ? this.masterVolume : vol;
-		this.gain.connect(context.destination);
+//		if(this.gain != null){
+//			vol = this.gain.gain.value;
+//		}
+//		this.gain = null;
+//		this.gain = context.createGain();
+//		this.gain.gain.value = vol == null ? this.masterVolume : vol;
+//		this.gain.connect(context.destination);
 		
 		//プロセス
 		this.scriptProcess = null;
@@ -145,13 +145,14 @@ class LitroSound{
 		scriptProcess.onaudioprocess = function(ev){self.bufferProcess(ev);};
 		scriptProcess.parent_audio = this;
 		
-		scriptProcess.connect(this.gain);
+//		scriptProcess.connect(this.gain);
+		scriptProcess.connect(context.destination);
 		this.scriptProcess = scriptProcess;
 		
 		//iOSで必須！！
-		this.source = this.context.createBufferSource();
-		this.source.connect(scriptProcess);
-		this.source.start(0);
+//		this.source = this.context.createBufferSource();
+//		this.source.connect(scriptProcess);
+//		this.source.start(0);
 		
 		this.buffer0Array = new Float32Array(defines.SINGLE_PROCESS_BUFFER_SIZE);
 		// this.source.playbackRate = 8;
@@ -161,7 +162,7 @@ class LitroSound{
 		this.analyser.fft = 512;
 //		scriptProcess.connect(this.analyser);
 //gain が解析元
-		this.gain.connect(this.analyser);
+//		this.gain.connect(this.analyser);
 		
 	}
 	
@@ -187,7 +188,10 @@ class LitroSound{
 	{
 		this.scriptProcess.disconnect();
 		this.scriptProcess.onaudioprocess = null;
-		this.gain.disconnect();
+//		this.gain.disconnect();
+//		this.source.disconnect();
+		this.analyser.disconnect();
+		
 	}
 	
 	setTouchOuth(eQuery)
@@ -218,6 +222,7 @@ class LitroSound{
 			, data = ev.outputBuffer.getChannelData(0), channel, chdata, avol
 			, dlen = data.length, clen = defines.CHANNELS_NUM, plen = this.players.length
 			, rate = this.refreshRate, rCrock = this.refreshClock, cRate = this.clockRate
+			, mvol = this.masterVolume
 			// , d0 = new Float32Array(ev.outputBuffer.length)
 			;
 			// console.log(channels.length);
@@ -228,6 +233,8 @@ class LitroSound{
 		for(pl = 0; pl < plen; pl++){
 			players.push(this.players[pl].player);
 		}
+//		players = [this.players[0].player];
+//		plen = 1;
 //		return;
 		data.set(this.buffer0Array);
 		for(i = 0; i < dlen; i++){
@@ -258,7 +265,7 @@ class LitroSound{
 						avol += channel.absorbVolume();
 					}
 				}
-				data[i] += chdata + avol;
+				data[i] += (chdata + avol) * mvol;
 			}
 		}
 		this.refreshClock = rCrock;
@@ -369,6 +376,10 @@ LitroPlayer.prototype = {
 		
 		this.eventsetData = []; //ControllChangeともいう
 		this.delayEventset = [];
+		
+		 this.currentEventIndex = []; //現在待機中のイベント
+		 this.currentDelayedEventIndex = [];
+		
 		this.fileUserName = 'guest_user_';
 		this.playerAccount = 'guest_user_';
 		this.sound_id = null;
@@ -750,8 +761,10 @@ LitroPlayer.prototype = {
 		if(!this.isSweepNotes(ch)){
 			return;
 		}
-		baseNote = this.searchNearBack(ch, this.noteSeekTime - delay, 0, 'note');
-		targetNote = this.searchNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
+//		baseNote = this.searchNearBack(ch, this.noteSeekTime - delay, 0, 'note');
+//		targetNote = this.searchNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
+		baseNote = this.searchEventNearBack(ch, this.noteSeekTime - delay, 0, 'note');
+		targetNote = this.searchEventNearForward(ch, this.noteSeekTime - delay, -1, 'note', baseNote);
 		if(baseNote == null || targetNote == null){
 			this.clearSweepNotes(ch);
 			return;
@@ -768,8 +781,12 @@ LitroPlayer.prototype = {
 		
 	clearEventsData: function()
 	{
-		this.eventsetData = makeEventsetData();
-		this.delayEventset = makeEventsetData(); 
+//		this.eventsetData = makeEventsetData();
+//		this.delayEventset = makeEventsetData();
+		this.eventsetData = makeEventsetDataArray();
+		this.delayEventset = makeEventsetDataArray();
+		this.currentEventIndex = makeCurrentEventIndex();
+		this.currentDelayedEventIndex = makeCurrentEventIndex();
 		this.noteSeekTime= 0; //note をセットする位置
 		
 	},
@@ -840,7 +857,8 @@ LitroPlayer.prototype = {
 			sound.user_name = data.user_name == null ? '' : data.user_name;
 			sound.user_id = data.user_id == null ? 0 : data.user_id;
 			sound.sound_id = data.sound_id == null ? 0 : data.sound_id;
-			self.setPlayData(sound);
+			self.setPlayDataOptimized(sound);
+//			self.setPlayData(sound);
 			
 			// self.dataPacks[self.NONPACK_NAME] = {};
 			// self.dataPacks[self.NONPACK_NAME][sound.title] = sound;
@@ -879,6 +897,7 @@ LitroPlayer.prototype = {
 		//TODO packloadにさせるか考え中
 	let self = this
 		, params = {}
+		, pack = new LitroPlayPack();
 		;
 		func = func == null ? function(){return;} : func;
 		errorFunc = errorFunc == null ? function(){return;} : errorFunc;
@@ -887,23 +906,10 @@ LitroPlayer.prototype = {
 		}
 		
 		params.sename = sename;
-		
+		//TODO　システム動作検証
 		sendToAPIServer('GET', 'systemse', params, function(data){
-			let i
-			, packFiles = self.playPack.packFiles
-			, packTitles = self.playPack.packTitles
-			, packIDs = self.playPack.packIDs
-			, lp = new LitroSoundParser();
-			if(data == null || data == false){
-				errorFunc(data);
-			}
-			for(i = 0; i < data.length; i++){
-				data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
-				packFiles.push(data[i]);
-				packTitles.push(data[i].title);
-				packIDs.push(data[i].sound_id);
-			}
-			
+			let packFiles = pack.packReceive(data);
+
 			self.setPlayDataFromPackIndex(sename, 0);
 			
 			func(packFiles);
@@ -924,6 +930,20 @@ LitroPlayer.prototype = {
 		this.playPack.listFromServer(user_id, page, limit, func, errorFunc);
 	},
 	
+	setPlayDataOptimized: function(data)
+	{
+		let lp = new LitroSoundParser();
+		this.clearEventsData();
+		
+		this.eventsetData = data.parseDataOptimized != null ? data.parseDataOptimized : lp.parseDataStrOptimize(decodeURIComponent(data.data));
+		
+		this.title = data.title == null ? '' : data.title;
+		this.fileUserName = data.user_name == null ? '' : data.user_name;
+		this.user_id = data.user_id == null ? 0 : data.user_id;
+		this.sound_id = data.sound_id == null ? 0 : data.sound_id;
+		return true;
+	},
+	
 	setPlayData: function(data)
 	{
 		let lp = new LitroSoundParser();
@@ -931,6 +951,7 @@ LitroPlayer.prototype = {
 		// this.eventsetData = this.parseDataStr(decodeURIComponent(data.data));
 		
 		this.eventsetData = data.parseData != null ? data.parseData : lp.parseDataStr(decodeURIComponent(data.data));
+		
 		this.title = data.title == null ? '' : data.title;
 		this.fileUserName = data.user_name == null ? '' : data.user_name;
 		this.user_id = data.user_id == null ? 0 : data.user_id;
@@ -972,7 +993,8 @@ LitroPlayer.prototype = {
 		if(files[index] == null){
 			return false;
 		}
-		return this.setPlayData(files[index]);
+		return this.setPlayDataOptimized(files[index]);
+//		return this.setPlayData(files[index]);
 	},
 	
 	setPlayDataFromPackForTitle: function(title)
@@ -1042,7 +1064,8 @@ LitroPlayer.prototype = {
 		this.litroSound.context.resume();
 		this.systemTime = performance.now();
 		this.playSoundFlag = true;
-		this.delayEventset = makeEventsetData();
+		this.delayEventset = makeEventsetDataArray();
+//		this.delayEventset = makeEventsetData();
 		this.finishChannelEnvelope();
 		
 		// for(let i = 0; i < this.channel.length; i++){
@@ -1060,7 +1083,8 @@ LitroPlayer.prototype = {
 		this.resetFadeChannel();
 		this.systemTime = performance.now();
 		this.playSoundFlag = false;
-		this.delayEventset = makeEventsetData();
+		this.delayEventset = makeEventsetDataArray();
+//		this.delayEventset = makeEventsetData();
 		this.finishChannelEnvelope();
 		
 		this.onStopFunc();
@@ -1159,14 +1183,14 @@ LitroPlayer.prototype = {
 	
 	volume: function(vol)
 	{
+		this.litroSound.masterVolume = vol;
+		return;
+		
 		let sTime, gain = this.litroSound.gain.gain;
 		if(vol != null){
 			vol = vol < 0 ? 0 : vol;
 			sTime = this.litroSound.context.currentTime;
 			gain.value = vol;
-			// gain.cancelScheduledValues(sTime);
-			// gain.setValueAtTime(gain.value, sTime);
-			// gain.setTargetAtTime(vol, sTime, 0);
 		}else{
 			vol = gain.value;
 		}
@@ -1184,6 +1208,16 @@ LitroPlayer.prototype = {
 		for(t  in set){
 			if(set[t].value == tuneID){
 				return t | 0;
+			}
+		}
+		return -1;
+	},	
+	commonEventOptimizedTime: function(eventName){
+		let t, tuneID = LitroWaveChannel.tuneParamsProp[eventName].id
+			, set = this.eventsetData[this.COMMON_TUNE_CH].event;
+		for(t = 0; t < set.length; t++){
+			if(set[t].value == tuneID){
+				return set[t].time | 0;
 			}
 		}
 		return -1;
@@ -1210,7 +1244,8 @@ LitroPlayer.prototype = {
 		}else if(type == 'event'){
 			switch(value){
 				case tuneProp['return'].id:
-					restart = this.commonEventTime('restart');
+//					restart = this.commonEventTime('restart');
+					restart = this.commonEventOptimizedTime('restart');
 					if(this.playOnce || (restart == -1)){
 						this.stop();
 						return true;
@@ -1220,8 +1255,11 @@ LitroPlayer.prototype = {
 					}
 					
 					this.seekMoveBack(-1);
-					this.seekMoveForward(this.commonEventTime('restart'));
-					this.delayEventset = makeEventsetData();
+//					this.seekMoveForward(this.commonEventTime('restart'));
+					this.seekMoveForward(this.commonEventOptimizedTime('restart'));
+					this.setCurrentEventAtTime('ALL', 'ALL', this.noteSeekTime);
+//					this.delayEventset = makeEventsetDataArray();
+//					this.delayEventset = makeEventsetData();
 					this.restartEvent();
 					return true;
 					
@@ -1230,8 +1268,11 @@ LitroPlayer.prototype = {
 						return true;
 					}
 					this.seekMoveBack(-1);
-					this.seekMoveForward(this.commonEventTime('tmpstart'));
-					this.delayEventset = makeEventsetData();
+//					this.seekMoveForward(this.commonEventTime('tmpstart'));
+					this.seekMoveForward(this.commonEventOptimizedTime('tmpstart'));
+					this.setCurrentEventAtTime('ALL', 'ALL', this.noteSeekTime);
+//					this.delayEventset = makeEventsetDataArray();
+//					this.delayEventset = makeEventsetData();
 					this.restartEvent();
 					return true;
 					
@@ -1250,18 +1291,86 @@ LitroPlayer.prototype = {
 		return false;
 	},
 	
+	getCurrentEvent: function(ch, type){
+		return this.eventsetData[ch][type][this.currentEventIndex[ch][type]];
+	},
+	
+	nextCurrentEvent: function(ch, type){
+		return this.currentEventIndex[ch][type]++;
+	},
+
+	getCurrentDelayedEvent: function(ch, type){
+		return this.delayEventset[ch][type][0];
+//		return this.delayEventset[ch][type][this.currentDelayedEventIndex[ch][type]];
+	},
+	
+	nextcurrentDeleyedEvent: function(ch, type){
+		return this.delayEventset[ch][type].shift();
+//		return this.currentDelayedEventIndex[ch][type]++;
+	},
+	
+	setCurrentEventAtTime: function(ch, type, time){
+		var i, types = type == 'ALL' || type == null ? this.typesArray(type) : [type]
+			, channels = ch == 'ALL' || ch == null ? this.channel : [this.channel[ch]]
+			, data, dlen, ddata
+			, s
+			, c, t
+		;
+		for(c = 0; c < channels.length; c++){
+			for(s = 0; s < types.length; s++){
+				t = types[s];
+				
+				data = this.searchEventInfoNearForward(c, time, -1, t);
+				this.currentEventIndex[c][t] = data != null ? data.index : 0;
+				continue;
+			}
+		}
+	},
+	
+	scanEdataOptimized: function(ch, edata)
+	{
+		let seekTime = this.noteSeekTime, looped = false
+			, sort = LitroWaveChannel.sortParam, slen = sort.length
+			, type, i
+			, delay = this.getDelay(ch)
+			, currentEvent
+		;
+		for(i = 0; i < slen; i++){
+			type = sort[i];
+			if(type != 'note' && type != 'event' && ch != 3){
+				continue
+			}
+			currentEvent = this.getCurrentEvent(ch, type)
+			if(currentEvent == null || currentEvent.time > seekTime){continue;}
+			
+			if(delay > 0){
+				this.soundEventDelayPushArray(ch, delay, delay + currentEvent.time, type, currentEvent.value);
+			}else{
+				looped = looped || this.soundEventPush(ch, type, currentEvent.value);
+				delay = this.getDelay(ch);
+			}
+			
+			if(looped === false){
+				this.nextCurrentEvent(ch, type);
+			}
+		}
+		return looped;
+	},
+	
 	scanEdata: function(ch, edata)
 	{
 		let seekTime = this.noteSeekTime, looped = false
 			, sort = LitroWaveChannel.sortParam, slen = sort.length, typeBlock, data
 			, type, i
-			, delay = this.getDelay(ch);
+			, delay = this.getDelay(ch)
+			, chedata = edata[ch]
 		;
 		for(i = 0; i < slen; i++){
 			type = sort[i];
-			typeBlock = edata[ch][type];
-			if(typeBlock[seekTime] == null){continue;}
-			data = typeBlock[seekTime];
+//			typeBlock = chedata[type];
+			data = chedata[type][seekTime];
+			if(data == null){continue;}
+			
 			if(delay > 0){
 				this.soundEventDelayPush(ch, delay, delay + data.time, type, data.value);
 			}else{
@@ -1272,6 +1381,28 @@ LitroPlayer.prototype = {
 		}
 		return looped;
 	},
+
+	scanDelayedEdataOptimized: function(ch, dData)
+	{
+		let seekTime = this.noteSeekTime, looped = false
+			, sort = LitroWaveChannel.sortParam, slen = sort.length, typeBlock, data
+			, type, i
+			, currentDeleyedEvent
+		;
+		for(i = 0; i < slen; i++){
+			type = sort[i];
+			currentDeleyedEvent = this.getCurrentDelayedEvent(ch, type)
+			
+			if(currentDeleyedEvent == null || currentDeleyedEvent.time > seekTime){continue;}
+			looped = looped || this.soundEventPush(ch, type, currentDeleyedEvent.value);
+			if(looped === false){
+				this.nextcurrentDeleyedEvent(ch, type);
+			}
+		}
+		
+		return looped;
+	},
+	
 	scanDelayedEdata: function(ch, dData)
 	{
 		let seekTime = this.noteSeekTime, looped = false
@@ -1302,13 +1433,16 @@ LitroPlayer.prototype = {
 		;
 		for(t = 0; t < perFrameTime; t++){
 			for(ch = 0; ch < clen; ch++){
-				looped |= this.scanEdata(ch, eData);
+//				looped |= this.scanEdata(ch, eData);
+				looped = looped || this.scanEdataOptimized(ch, eData);
 			}
 			if(!this.isPlay()){
 				return;
 			}
 			for(ch = 0; ch < clen; ch++){
-				looped |= this.scanDelayedEdata(ch, dData);
+//				looped |= this.scanDelayedEdata(ch, dData);
+				looped = looped || this.scanDelayedEdataOptimized(ch, dData);
+				
 			}
 			if(!looped){
 				this.seekMoveForward(1);
@@ -1328,9 +1462,13 @@ LitroPlayer.prototype = {
 	
 	soundEventDelayPush: function(ch, time, time_id, type, value)
 	{
-		// this.delayEventset[ch] = this.delayEventset[ch] == null ? {} : this.delayEventset[ch];
-		// this.delayEventset[ch][type] = this.delayEventset[ch][type] == null ? {} : this.delayEventset[ch][type];
 		this.delayEventset[ch][type][time_id | 0] = {time: time | 0, ch: ch, type: type, value: value};
+	},
+	
+	soundEventDelayPushArray: function(ch, time, time_id, type, value)
+	{
+//		this.delayEventset[ch][type].push({time: time | 0, ch: ch, type: type, value: value});
+		this.delayEventset[ch][type].push({time: time_id | 0, ch: ch, type: type, value: value});
 	},
 	
 	getEventsFromTime: function(ch, time, filter)
@@ -1424,8 +1562,91 @@ LitroPlayer.prototype = {
 		return types;
 	},
 	
+	searchEventInfoNearForward: function(ch, start, end, targetType, ignore){
+		let i, tindex, events = [], types = [], eventset
+			, keyIndex = this.eventsetKeyIndex
+			, index, type
+		;
+		start = start == null ? this.noteSeekTime : start;
+		//前方一致
+		types = this.typesArray(targetType == null ? 'ALL' : targetType);
+//		events = this.allStackEventset(ch, types);
+
+//		index = this.currentEventIndex[ch][targetType];
+		index = 0;
+		events = this.eventsetData[ch];
+		
+		for(tindex = 0; tindex < types.length; tindex++){
+			type = types[tindex];
+			for(i = index; i < events[type].length; i++){
+				eventset = events[type][i];
+				if(eventset == null){
+					break;
+				}
+				if(ignore != null && ignore.time == eventset.time){
+					if(ignore.type == eventset.type || keyIndex[ignore.type] >= keyIndex[eventset.type]){
+						continue;
+					}
+				}
+				if(eventset.time >= start && (end >= 0 && eventset.time <= end)){
+					return {type: type, index: i, eventset: eventset};
+				}else if(eventset.time >= start && end < 0){
+					//end -1 指定：最後まで
+					return {type: type, index: i, eventset: eventset};
+				}
+//				if(eventset != null){
+//					return {type: type, index: i, eventset: eventset};
+//				}
+			}
+		}
+		
+		return null;
+	},
 	//Note検索 end:0前方・-1後方
 	//return eventset / null
+	searchEventNearForward: function(ch, start, end, type, ignore)
+	{
+		let e = this.searchEventInfoNearForward(ch, start, end, type, ignore);
+		return e != null ? e.eventset : null;
+	},
+	
+	searchEventInfoNearBack: function(ch, start, end, targetType, ignore){
+		let i, tindex, events = [], types = [], eventset
+			, keyIndex = this.eventsetKeyIndex
+			, index, type
+		;
+		start = start == null ? this.noteSeekTime : start;
+		types = this.typesArray(targetType == null ? 'ALL' : targetType);
+		
+		events = this.eventsetData[ch];
+		
+		for(tindex = 0; tindex < types.length; tindex++){
+			type = types[tindex];
+			for(i = events[type].length - 1; i >= 0; i--){
+				eventset = events[type][i];
+				if(eventset == null){
+					break;
+				}
+				if(ignore != null && ignore.time == eventset.time){
+					if(ignore.type == eventset.type || keyIndex[ignore.type] <= keyIndex[eventset.type]){
+						continue;
+					}
+				}
+				if(eventset.time <= start && eventset.time >= end){
+					return {type: type, index: i, eventset: eventset};
+				}
+			}
+		}
+		
+		return null;
+	},
+	//return eventset / null
+	searchEventNearBack: function(ch, start, end, type, ignore)
+	{
+		let e = this.searchEventInfoNearBack(ch, start, end, type, ignore);
+		return e != null ? e.eventset : null;
+
+	},
 	searchNearForward: function(ch, start, end, type, ignore)
 	{
 		let t, tindex, events ={}, types = [], eventset
@@ -1454,7 +1675,6 @@ LitroPlayer.prototype = {
 		}
 		return null;
 	},
-	//return eventset / null
 	searchNearBack: function(ch, start, end, type, ignore)
 	{
 		let t, tindex, events ={}, types = [], eventset
@@ -1504,6 +1724,36 @@ function makeEventsetData(channels){
 	return eventset;
 };
 
+function makeEventsetDataArray(channels){
+	let i, eventset = [], type, ch, addEtc = 0
+	;
+	channels = channels == null ? litroSoundInstance.channel.length : channels;
+	for(ch = 0; ch < channels + addEtc; ch++){
+		// this.noteData.push({});
+		eventset.push({});
+		eventset[ch].note = {};
+		for(i = 0; i < LitroWaveChannel.sortParam.length; i++){
+			eventset[ch][LitroWaveChannel.sortParam[i]] = [];
+		}
+	}
+	return eventset;
+};
+
+function makeCurrentEventIndex(channels){
+	let i, indexes = [], type, ch, addEtc = 0
+	;
+	channels = channels == null ? litroSoundInstance.channel.length : channels;
+	for(ch = 0; ch < channels + addEtc; ch++){
+		// this.noteData.push({});
+		indexes.push({});
+		indexes[ch].note = {};
+		for(i = 0; i < LitroWaveChannel.sortParam.length; i++){
+			indexes[ch][LitroWaveChannel.sortParam[i]] = 0;
+		}
+	}
+	return indexes;
+};
+
 
 function LitroPlayPack(){return;};
 LitroPlayPack.prototype = {
@@ -1513,6 +1763,7 @@ LitroPlayPack.prototype = {
 		this.packFiles = [];
 		this.packTitles = [];
 		this.packIDs = [];
+//		this.packOptimized = [];
 		
 		// this.litroSound = litroSoundInstance;
 		
@@ -1560,21 +1811,7 @@ LitroPlayPack.prototype = {
 		
 		//data : {sound_id, ?}
 		sendToAPIServer('GET', 'packload', params, function(data){
-			let i
-			, packFiles = self.packFiles
-			, packTitles = self.packTitles
-			, packIDs = self.packIDs
-			, lp = new LitroSoundParser();
-			if(data == null || data == false){
-				errorFunc(data);
-				return;
-			}
-			for(i = 0; i < data.length; i++){
-				data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
-				packFiles.push(data[i]);
-				packTitles.push(data[i].title);
-				packIDs.push(data[i].sound_id);
-			}
+			let packFiles = self.packReceive(data);
 			
 			func(packFiles);
 			}, errorFunc);
@@ -1584,24 +1821,28 @@ LitroPlayPack.prototype = {
 	packReceive: function(data)
 	{
 		let i
-		, packFiles = this.packFiles
-		, packTitles = this.packTitles
-		, packIDs = this.packIDs
-		, lp = new LitroSoundParser();
+			, packFiles = this.packFiles
+//			, packOptimize = this.packOptimized
+			, packTitles = this.packTitles
+			, packIDs = this.packIDs
+			, lp = new LitroSoundParser()
+		;
 		if(data == null || data == false){
 			errorFunc(data);
 		}
 		for(i = 0; i < data.length; i++){
 			data[i].parseData = lp.parseDataStr(decodeURIComponent(data[i].data));
+			data[i].parseDataOptimized = lp.parseDataStrOptimize(decodeURIComponent(data[i].data));
 			packFiles.push(data[i]);
 			packTitles.push(data[i].title);
 			packIDs.push(data[i].sound_id);
 		}
-		
+		return packFiles;
 		// this.setPlayDataFromPackIndex(, 0);
 		
-		func(packFiles);	
+//		func(packFiles);
 	},
+	
 };
 
 //TODO parserを作る？
@@ -1782,6 +2023,23 @@ LitroSoundParser.prototype = {
 		return res;
 	},
 	
+	timevalDataArray: function(type, timeval){
+		let i, res = [], datLen = this.DATA_LENGTH36
+		, mode = this.CHARCODE_MODE
+		, chunkLen = datLen.time + datLen.value
+		, length = (timeval.length / chunkLen) | 0
+		, time, value
+		, prop = LitroWaveChannel.tuneParamsProp
+		;
+		for(i = 0; i < length; i++){
+			time = parseInt(timeval.substr(chunkLen * i, datLen.time), mode);
+			value = parseInt(timeval.substr((chunkLen * i) + datLen.time, datLen.value), mode) + prop[type].min;
+			res.push(makeLitroElement(type, time, value));
+		}
+		return res;
+	}, 
+
+	
 	parseHeaderStr: function(str)
 	{
 		// '[version]' '[auth]' '[title]' 
@@ -1804,7 +2062,8 @@ LitroSoundParser.prototype = {
 			, idKey, ch, type, tval
 			, minLen = datLen.ch + datLen.type + datLen.timeval
 			, delim = this.dataHeaderDelimiter, headerParams = {}
-			, eventsetData = makeEventsetData();
+			, eventsetData = makeEventsetDataArray();
+//			, eventsetData = makeEventsetData();
 		;
 		headerParams = this.parseHeaderStr(data.substr(0, data.lastIndexOf(delim)));
 		idKey = LitroWaveChannel.tuneParamsIDKey(headerParams.fversion.split('.')[0]);
@@ -1818,7 +2077,42 @@ LitroSoundParser.prototype = {
 			rlen += this.DATA_LENGTH36.type;
 			tvalLen = parseInt(data.substr(rlen, this.DATA_LENGTH36.timeval), mode);
 			rlen += this.DATA_LENGTH36.timeval;
+			//時間ごとのevent/time/typeのObjectを取得
 			tval = this.timevalData(type, data.substr(rlen, (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen));
+			rlen += (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen;
+			if(eventsetData[ch] == null){
+				eventsetData[ch] = {};
+			}
+			eventsetData[ch][type] = tval;
+		}
+		
+		return eventsetData;
+	},
+	
+	parseDataStrOptimize: function(data){
+		let dlen
+			, mode = this.CHARCODE_MODE
+			, datLen = this.DATA_LENGTH36
+			, rlen = 0, res = '', tvalLen = 0
+			, idKey, ch, type, tval
+			, minLen = datLen.ch + datLen.type + datLen.timeval
+			, delim = this.dataHeaderDelimiter, headerParams = {}
+			, eventsetData = makeEventsetDataArray();
+		;
+		headerParams = this.parseHeaderStr(data.substr(0, data.lastIndexOf(delim)));
+		idKey = LitroWaveChannel.tuneParamsIDKey(headerParams.fversion.split('.')[0]);
+		data = data.substr(data.lastIndexOf(delim) + delim.length);
+		dlen = data.length;
+
+		while(dlen > rlen + minLen){
+			ch = parseInt(data.substr(rlen, this.DATA_LENGTH36.ch), mode);
+			rlen += this.DATA_LENGTH36.ch;
+			type = idKey[parseInt(data.substr(rlen, this.DATA_LENGTH36.type), mode) | 0];
+			rlen += this.DATA_LENGTH36.type;
+			tvalLen = parseInt(data.substr(rlen, this.DATA_LENGTH36.timeval), mode);
+			rlen += this.DATA_LENGTH36.timeval;
+			//時間ごとのevent/time/typeのObjectを取得
+			tval = this.timevalDataArray(type, data.substr(rlen, (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen));
 			rlen += (this.DATA_LENGTH36.time + this.DATA_LENGTH36.value) * tvalLen;
 			if(eventsetData[ch] == null){
 				eventsetData[ch] = {};
