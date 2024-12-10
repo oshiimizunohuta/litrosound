@@ -22,7 +22,7 @@ function makeLitroPlayerHandle(name, handle){
 //}
 
 class LitroPlayerHandle{
-	
+
 	constructor(name, handle){
 		this.handle = handle;
 		this.name = name;
@@ -38,7 +38,7 @@ class LitroPlayerHandle{
 		LitroPlayerHandle.APIServer = LitroPlayerHandle.APIServer == null ? {url: null} : LitroPlayerHandle.APIServer;
 
 	}
-	
+
 	postApi(apifunc, args, callback, failedfunc){
 		let p = {}, handle = this.handle;
 		p.player = {name: this.name, func: apifunc, args: args};
@@ -53,15 +53,15 @@ class LitroPlayerHandle{
 		if(this.message[this.name] == null){
 			this.message[this.name] = {};
 		}
-		
+
 		this.messageFailedFunc[this.name][apifunc] = failedfunc;
-	
+
 	}
 	postProperties(propkey, params){
 		let p = {}, handle = this.handle;
 		p.player = {name: this.name, key: propkey, params: params};
 		handle.workletNode.port.postMessage(p);
-		
+
 	}
 	appendPack(receivePacks){
 		let packs = this.playPack, i
@@ -92,9 +92,9 @@ class LitroPlayerHandle{
 		if(sename == null){
 			return;
 		}
-		
+
 		params.sename = sename;
-		
+
 		LitroPlayerHandle.sendToAPIServer('GET', 'systemse', params, function(data){
 			let i
 			, packFiles = self.playPack.packFiles
@@ -110,13 +110,13 @@ class LitroPlayerHandle{
 				packTitles.push(data[i].title);
 				packIDs.push(data[i].sound_id);
 			}
-			
+
 			self.setPlayDataFromPackIndex(sename, 0);
-			
+
 			func(packFiles);
 			}, errorFunc);
 	}
-	
+
 	loadPack(user_id, query, successFunc, errorFunc)
 	{
 		let self = this;
@@ -125,22 +125,22 @@ class LitroPlayerHandle{
 			if(successFunc != null){successFunc(data);}
 		}, errorFunc);
 	}
-	
+
 	packListFromServer(user_id, page, limit, func, errorFunc)
 	{
 		this.playPack.listFromServer(user_id, page, limit, func, errorFunc);
 	}
-	
+
 	insertPack(pack)
 	{
 		let title, playdata;
 		for(title in pack){
 			playdata = pack[title];
-			// playdata = 
+			// playdata =
 		}
 		this.playPack = pack;
 	}
-	
+
 	setPlayDataFromPackIndex(index)
 	{
 		let files = this.playPack.packFiles;
@@ -149,7 +149,7 @@ class LitroPlayerHandle{
 		}
 		return this.postApi('setPlayData', [files[index]]);
 	}
-	
+
 	setPlayDataFromPackForTitle(title)
 	{
 		let key, titles = this.playPack.packTitles
@@ -160,7 +160,7 @@ class LitroPlayerHandle{
 		}
 		return this.setPlayDataFromPackIndex(index);
 	}
-	
+
 	playForKey(key){
 //		this.systemTime = performance.now();
 //		this.handle.context.resume();
@@ -176,7 +176,7 @@ class LitroPlayerHandle{
 		if(res == false){
 			return false;
 		}
-		
+
 		this.systemTime = performance.now();
 		this.handle.context.resume();
 		this.postApi(null, [this.systemTime]);
@@ -193,7 +193,7 @@ class LitroPlayerHandle{
 		this.systemTime = performance.now();
 		this.playSoundFlag = false;
 //		this.finishChannelEnvelope();
-		
+
 		this.onStopFunc();
 
 	}
@@ -210,7 +210,7 @@ class LitroPlayerHandle{
 //		this.fadeDiff = this.fadeEnd - this.fadeStart;
 //		this.fadeMode = -1;
 	}
-	
+
 	fadein(title, time, func)
 	{
 		if(title == null){
@@ -221,7 +221,7 @@ class LitroPlayerHandle{
 //		this.resetFadeChannel();
 		this.onFadeEndFunc = func == null ? function(){return;} : func;
 		this.postApi('fadein', [title, time]);
-		
+
 //		this.fadeStart = this.systemTime;
 //		this.fadeEnd = this.fadeStart + time;
 //		this.fadeDiff = this.fadeEnd - this.fadeStart;
@@ -256,7 +256,7 @@ class LitroPlayerHandle{
 	isPlay(name){
 		return this.playSoundFlag;
 	}
-	
+
 //	loadPack(user_id, query, successFunc, errorFunc)
 //	{
 //		let self = this;
@@ -265,7 +265,7 @@ class LitroPlayerHandle{
 //			if(successFunc != null){successFunc(data);}
 //		}, errorFunc);
 //	}
-//	
+//
 //	loadPlayPack(user_id, pack_query, func, errorFunc)
 //	{
 //		let self = this
@@ -283,7 +283,7 @@ class LitroPlayerHandle{
 //			errorFunc({error_code: 0, message: 'no query'});
 //			return;
 //		}
-//		
+//
 //		//data : {sound_id, ?}
 //		LitroPlayerHandle.sendToAPIServer('GET', 'packload', params, function(data){
 //			let i
@@ -297,17 +297,17 @@ class LitroPlayerHandle{
 //			self.postApi('appendPack', [data]), function(){
 //				self.playPack = self.postApi('appendPack', [data]);
 //			};
-//			
+//
 //			func(packFiles);
 //		}, errorFunc);
-//			
+//
 //	}
-	
+
 	static initLTSNDServer(apiUrl)
 	{
 		LitroPlayerHandle.initAPIServer(apiUrl);
 	}
-	
+
 	static initAPIServer(apiUrl)
 	{
 		if(LitroPlayerHandle.APIServer == null){
@@ -315,7 +315,7 @@ class LitroPlayerHandle{
 		}
 		LitroPlayerHandle.APIServer.url = apiUrl;
 	}
-	
+
 	static sendToAPIServer(method, api, params, func, errorFunc)
 	{
 		let str, query = [], key, x = new XMLHttpRequest();
@@ -388,7 +388,7 @@ export class LitroHandle{
 		defines.processorMode('worklet');
 		// this.channel_s = [];
 		// this.channel_s.length = channelNum;
-		
+
 		// this.players = {};
 		this.players = [];
 		this.frameRate = defines.FRAME_RATE;
@@ -405,11 +405,11 @@ export class LitroHandle{
 		this.onNoteKeyEventFunc = function(){return;};
 		this.offNoteKeyEventFunc = function(){return;};
 		this.fadeoutEventFunc = function(){return;};
-		
+
 		this.message = {};
 		this.messageCallback = {};
 		this.messageFailedFunc = {};
-		
+
 		window.performance = window.performance == null ? window.Date : window.performance;
 		window.AudioContext = window.AudioContext || window.webkitAudioContext;
 		if(window.AudioContext == null){
@@ -430,7 +430,7 @@ export class LitroHandle{
 			;
 			self.workletNode = node;
 			self.connectModules();
-			
+
 			self.callback.ready();
 		});
 
@@ -438,12 +438,12 @@ export class LitroHandle{
 		// 出力開始
 		// src.noteOn(0);
 	}
-	
+
 	getCallback(){
 		return this.callback;
-		
+
 	}
-	
+
 	engine(apifunc, args, callback, failedfunc){
 		this.workletNode.port.postMessage({engine: {func: apifunc, args: args}});
 	}
@@ -451,9 +451,9 @@ export class LitroHandle{
 		let p = {}, handle = this.handle;
 		p.engine = {key: propkey, params: params};
 		this.workletNode.port.postMessage(p);
-		
+
 	}
-	
+
 	appendPlayer(name, player)
 	{
 		let primary = this.players.some(function(p, i){
@@ -468,13 +468,13 @@ export class LitroHandle{
 		this.players[primary] = append;
 		return primary;
 	}
-	
+
 	processorMessage(data){
 		let key, plname, i, func, args;
 		if(data.player != null){
 			key = data.player.key;
 			plname = data.player.name;
-			
+
 			for(i = 0; i < this.players.length; i++){
 				if(this.players[i].name == plname && data.player.func != null){
 					func = data.player.func;
@@ -508,7 +508,7 @@ export class LitroHandle{
 			}
 		}
 	}
-	
+
 	removePlayer(name)
 	{
 		let deleted;
@@ -522,7 +522,7 @@ export class LitroHandle{
 
 		return deleted;
 	}
-	
+
 	/**
 	 * 視覚用波形出力
 	 * @param {Object} size
@@ -533,7 +533,7 @@ export class LitroHandle{
 		this.analyser.getByteTimeDomainData(data);
 		return data;
 	}
-	
+
 	createContext(){
 //		if(this.context == null){this.context = new AudioContext();}
 		if(this.context == null){
@@ -543,11 +543,11 @@ export class LitroHandle{
 			});
 		}
 		// context.sampleRate = rate; //read only
-		
+
 		this.sampleRate = this.context.sampleRate; //
 //		console.log(this.sampleRate)
 	}
-	
+
 	connectModules(size)
 	{
 		let src, self = this, vol, node
@@ -560,12 +560,12 @@ export class LitroHandle{
 		this.gain = context.createGain();
 		this.gain.gain.value = vol == null ? this.masterVolume : vol;
 		this.gain.connect(context.destination);
-		
+
 		//iOSで必須！！
 		this.source = this.context.createBufferSource();
 //		this.source.connect(scriptProcess);
 		this.source.start(0);
-		
+
 		//プロセスはworkletmodule
 		this.workletNode.connect(self.gain);
 		this.source.connect(this.workletNode);
@@ -574,7 +574,7 @@ export class LitroHandle{
 		};
 		this.workletNode.port.postMessage({init: {sample_rate: context.sampleRate}});
 		this.postProperties('sampleRate', this.sampleRate);
-		
+
 		// this.source.playbackRate = 8;
 		//解析
 		this.analyser = null;
@@ -583,9 +583,9 @@ export class LitroHandle{
 //		scriptProcess.connect(this.analyser);
 //gain が解析元
 		this.gain.connect(this.analyser);
-		
+
 	}
-	
+
 	connectOn()
 	{
 		this.connectOff();
@@ -600,7 +600,7 @@ export class LitroHandle{
 		this.scriptProcess.onaudioprocess = null;
 		this.gain.disconnect();
 	}
-	
+
 	setTouchOuth(eQuery)
 	{
 		let e, type = typeof eQuery, self = this;
@@ -609,7 +609,7 @@ export class LitroHandle{
 		}else{
 			e = type == 'array' ? eQuery : [eQuery];
 		}
-		
+
 		function onoff(){
 			self.connectOff();
 			self.connectOn();
@@ -632,7 +632,7 @@ export class LitroHandle{
 			data[i] = 0;
 		}
 	}
-	
+
 	static setProcessorPath(path)
 	{
 		LitroHandle.processorPath = path;
@@ -702,9 +702,9 @@ export function LITROSOUND(user, bgmpack, sepack, func, errorFunc){
 			});
 		};
 //	}, false);
-	
+
 	return ltsnd;
-	
+
 }
 
 export function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
@@ -718,7 +718,7 @@ export function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		ltsnd.engine.setTouchOuth('body');
 		ltsnd.se = new LitroPlayer();
 		ltsnd.bgm = new LitroPlayer();
-		
+
 		ltsnd.se.init('se');
 		ltsnd.bgm.init('bgm');
 		ltsnd.bgm.loadPack(user, "name:" + bgmpack, function(){
@@ -735,7 +735,7 @@ export function LTSNDFULL(user, bgmpack, sepack, func, errorFunc){
 		});
 //	}, false);
 	return ltsnd;
-	
+
 }
 
 export function LTSND(user, pack, func, errorFunc){
@@ -749,7 +749,7 @@ export function LTSND(user, pack, func, errorFunc){
 		ltsnd.engin.setTouchOuth('body');
 		ltsnd.se = new LitroPlayer();
 		ltsnd.bgm = new LitroPlayer();
-		
+
 		ltsnd.se.init('se');
 		// bgmPlayer.init('bgm');
 		ltsnd.se.loadPack(user, "name:" + pack, function(){
@@ -758,7 +758,7 @@ export function LTSND(user, pack, func, errorFunc){
 			errorFunc(ltsnd);
 		});
 	}, false);
-	
+
 	return ltsnd;
 }
 
@@ -773,13 +773,13 @@ class LitroPlayPack{
 		this.packFiles = [];
 		this.packTitles = [];
 		this.packIDs = [];
-		
+
 		// this.litroSound = litroSoundInstance;
-		
+
 		this.NONPACK_NAME = ' NO-PACK ';
 
 	}
-	
+
 	listFromServer(user_id, page, limit, func, errorFunc)
 	{
 		let params = {page: page, limit: limit, user_id: user_id}
@@ -799,7 +799,7 @@ class LitroPlayPack{
 			func(self.serverFileList);
 		}, errorFunc);
 	}
-	
+
 	loadPack(user_id, pack_query, func, errorFunc)
 	{
 		let self = this
@@ -817,7 +817,7 @@ class LitroPlayPack{
 			errorFunc({error_code: 0, message: 'no query'});
 			return;
 		}
-		
+
 		//data : {sound_id, ?}
 		LitroPlayerHandle.sendToAPIServer('GET', 'packload', params, function(data){
 			let i
@@ -835,12 +835,12 @@ class LitroPlayPack{
 				packTitles.push(data[i].title);
 				packIDs.push(data[i].sound_id);
 			}
-			
+
 			func(packFiles);
 			}, errorFunc);
-			
+
 	}
-	
+
 	packReceive(data)
 	{
 		let i
@@ -857,10 +857,10 @@ class LitroPlayPack{
 			packTitles.push(data[i].title);
 			packIDs.push(data[i].sound_id);
 		}
-		
+
 		// this.setPlayDataFromPackIndex(, 0);
-		
-		func(packFiles);	
+
+		func(packFiles);
 	}
 };
 
@@ -871,4 +871,3 @@ function litroSoundMain()
 {
 	return;
 };
-
